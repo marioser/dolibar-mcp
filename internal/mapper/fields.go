@@ -15,8 +15,13 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		"payment_term_id":  "fk_cond_reglement",
 		"payment_mode_id":  "fk_mode_reglement",
 		"shipping_method_id": "fk_shipping_method",
-		"name":             "nom",
-		"title":            "title",
+		"description":        "desc",
+		"name":              "nom",
+		"title":             "title",
+		"date":              "date",
+		"due_date":          "date_lim_reglement",
+		"delivery_date":     "date_livraison",
+		"validity_end":      "fin_validite",
 	}
 
 	out := make(map[string]any, len(data))
