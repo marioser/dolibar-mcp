@@ -10,20 +10,20 @@ import (
 )
 
 type SearchInput struct {
-	Entity     string   `json:"entity" jsonschema:"description=Entity to search: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
-	Query      string   `json:"query,omitempty" jsonschema:"description=Text search (ref or name or label)"`
-	CustomerID int64    `json:"customer_id,omitempty" jsonschema:"description=Filter by customer/supplier ID"`
-	Status     *int     `json:"status,omitempty" jsonschema:"description=Filter by status code"`
-	DateFrom   string   `json:"date_from,omitempty" jsonschema:"description=Date from (YYYY-MM-DD)"`
-	DateTo     string   `json:"date_to,omitempty" jsonschema:"description=Date to (YYYY-MM-DD)"`
-	AmountMin  *float64 `json:"amount_min,omitempty" jsonschema:"description=Minimum amount (total_ht)"`
-	AmountMax  *float64 `json:"amount_max,omitempty" jsonschema:"description=Maximum amount (total_ht)"`
-	Limit      int      `json:"limit,omitempty" jsonschema:"description=Max results (default 25 max 100)"`
-	Offset     int      `json:"offset,omitempty" jsonschema:"description=Offset for pagination"`
+	Entity     string   `json:"entity" jsonschema:"Entity to search: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
+	Query      string   `json:"query,omitempty" jsonschema:"Text search (ref or name or label)"`
+	CustomerID int64    `json:"customer_id,omitempty" jsonschema:"Filter by customer/supplier ID"`
+	Status     *int     `json:"status,omitempty" jsonschema:"Filter by status code"`
+	DateFrom   string   `json:"date_from,omitempty" jsonschema:"Date from (YYYY-MM-DD)"`
+	DateTo     string   `json:"date_to,omitempty" jsonschema:"Date to (YYYY-MM-DD)"`
+	AmountMin  *float64 `json:"amount_min,omitempty" jsonschema:"Minimum amount (total_ht)"`
+	AmountMax  *float64 `json:"amount_max,omitempty" jsonschema:"Maximum amount (total_ht)"`
+	Limit      int      `json:"limit,omitempty" jsonschema:"Max results (default 25 max 100)"`
+	Offset     int      `json:"offset,omitempty" jsonschema:"Offset for pagination"`
 }
 
 type SearchOutput struct {
-	Result string `json:"result" jsonschema:"description=JSON search results"`
+	Result string `json:"result" jsonschema:"JSON search results"`
 }
 
 func (d *Deps) HandleSearch(ctx context.Context, req *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, SearchOutput, error) {

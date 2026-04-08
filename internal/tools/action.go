@@ -11,10 +11,10 @@ import (
 )
 
 type ActionInput struct {
-	Entity      string `json:"entity" jsonschema:"description=Entity type: proposals|orders|projects|purchases|shipments|receptions"`
-	ID          int64  `json:"id" jsonschema:"description=Entity ID"`
-	Action      string `json:"action" jsonschema:"description=Action: validate|close|settodraft|setinvoiced|approve|makeorder|receive"`
-	WarehouseID int64  `json:"warehouse_id,omitempty" jsonschema:"description=Warehouse ID (for stock-related actions)"`
+	Entity      string `json:"entity" jsonschema:"Entity type: proposals|orders|projects|purchases|shipments|receptions"`
+	ID          int64  `json:"id" jsonschema:"Entity ID"`
+	Action      string `json:"action" jsonschema:"Action: validate|close|settodraft|setinvoiced|approve|makeorder|receive"`
+	WarehouseID int64  `json:"warehouse_id,omitempty" jsonschema:"Warehouse ID (for stock-related actions)"`
 }
 
 func (d *Deps) HandleAction(ctx context.Context, req *mcp.CallToolRequest, input ActionInput) (*mcp.CallToolResult, WriteOutput, error) {

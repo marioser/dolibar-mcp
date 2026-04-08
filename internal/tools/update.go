@@ -10,9 +10,9 @@ import (
 )
 
 type UpdateInput struct {
-	Entity string         `json:"entity" jsonschema:"description=Entity to update"`
-	ID     int64          `json:"id" jsonschema:"description=Entity ID to update"`
-	Data   map[string]any `json:"data" jsonschema:"description=Fields to update (only changed fields needed)"`
+	Entity string         `json:"entity" jsonschema:"Entity to update"`
+	ID     int64          `json:"id" jsonschema:"Entity ID to update"`
+	Data   map[string]any `json:"data" jsonschema:"Fields to update (only changed fields needed)"`
 }
 
 func (d *Deps) HandleUpdate(ctx context.Context, req *mcp.CallToolRequest, input UpdateInput) (*mcp.CallToolResult, WriteOutput, error) {

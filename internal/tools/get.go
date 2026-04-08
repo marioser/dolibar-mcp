@@ -9,13 +9,13 @@ import (
 )
 
 type GetInput struct {
-	Entity string `json:"entity" jsonschema:"description=Entity type: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
-	ID     int64  `json:"id,omitempty" jsonschema:"description=Entity ID"`
-	Ref    string `json:"ref,omitempty" jsonschema:"description=Entity reference (alternative to ID)"`
+	Entity string `json:"entity" jsonschema:"Entity type: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
+	ID     int64  `json:"id,omitempty" jsonschema:"Entity ID"`
+	Ref    string `json:"ref,omitempty" jsonschema:"Entity reference (alternative to ID)"`
 }
 
 type GetOutput struct {
-	Result string `json:"result" jsonschema:"description=JSON entity details"`
+	Result string `json:"result" jsonschema:"JSON entity details"`
 }
 
 func (d *Deps) HandleGet(ctx context.Context, req *mcp.CallToolRequest, input GetInput) (*mcp.CallToolResult, GetOutput, error) {

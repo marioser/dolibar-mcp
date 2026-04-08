@@ -10,11 +10,11 @@ import (
 )
 
 type LineInput struct {
-	Action   string         `json:"action" jsonschema:"description=Line action: add|update|delete"`
-	Entity   string         `json:"entity" jsonschema:"description=Parent entity: proposals|orders|purchases"`
-	ParentID int64          `json:"parent_id" jsonschema:"description=Parent document ID"`
-	LineID   int64          `json:"line_id,omitempty" jsonschema:"description=Line ID (required for update and delete)"`
-	Data     map[string]any `json:"data,omitempty" jsonschema:"description=Line data: description/qty/unit_price/vat_rate/product_id/discount_percent/product_type/unit_id"`
+	Action   string         `json:"action" jsonschema:"Line action: add|update|delete"`
+	Entity   string         `json:"entity" jsonschema:"Parent entity: proposals|orders|purchases"`
+	ParentID int64          `json:"parent_id" jsonschema:"Parent document ID"`
+	LineID   int64          `json:"line_id,omitempty" jsonschema:"Line ID (required for update and delete)"`
+	Data     map[string]any `json:"data,omitempty" jsonschema:"Line data: description/qty/unit_price/vat_rate/product_id/discount_percent/product_type/unit_id"`
 }
 
 func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input LineInput) (*mcp.CallToolResult, WriteOutput, error) {
