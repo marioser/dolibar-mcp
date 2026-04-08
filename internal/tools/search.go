@@ -10,7 +10,7 @@ import (
 )
 
 type SearchInput struct {
-	Entity     string   `json:"entity" jsonschema:"required,description=Entity to search: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
+	Entity     string   `json:"entity" jsonschema:"description=Entity to search: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
 	Query      string   `json:"query,omitempty" jsonschema:"description=Text search (ref or name or label)"`
 	CustomerID int64    `json:"customer_id,omitempty" jsonschema:"description=Filter by customer/supplier ID"`
 	Status     *int     `json:"status,omitempty" jsonschema:"description=Filter by status code"`

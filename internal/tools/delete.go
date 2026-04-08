@@ -10,8 +10,8 @@ import (
 )
 
 type DeleteInput struct {
-	Entity string `json:"entity" jsonschema:"required,description=Entity to delete"`
-	ID     int64  `json:"id" jsonschema:"required,description=Entity ID to delete"`
+	Entity string `json:"entity" jsonschema:"description=Entity to delete"`
+	ID     int64  `json:"id" jsonschema:"description=Entity ID to delete"`
 }
 
 func (d *Deps) HandleDelete(ctx context.Context, req *mcp.CallToolRequest, input DeleteInput) (*mcp.CallToolResult, WriteOutput, error) {

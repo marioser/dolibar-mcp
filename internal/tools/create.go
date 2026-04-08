@@ -10,8 +10,8 @@ import (
 )
 
 type CreateInput struct {
-	Entity string         `json:"entity" jsonschema:"required,description=Entity to create: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
-	Data   map[string]any `json:"data" jsonschema:"required,description=Entity data. Use friendly names: customer_id/product_id/vat_rate/unit_price/discount_percent. For docs include lines array."`
+	Entity string         `json:"entity" jsonschema:"description=Entity to create: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
+	Data   map[string]any `json:"data" jsonschema:"description=Entity data. Use friendly names: customer_id/product_id/vat_rate/unit_price/discount_percent. For docs include lines array."`
 }
 
 type WriteOutput struct {

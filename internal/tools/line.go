@@ -10,9 +10,9 @@ import (
 )
 
 type LineInput struct {
-	Action   string         `json:"action" jsonschema:"required,description=Line action: add|update|delete"`
-	Entity   string         `json:"entity" jsonschema:"required,description=Parent entity: proposals|orders|purchases"`
-	ParentID int64          `json:"parent_id" jsonschema:"required,description=Parent document ID"`
+	Action   string         `json:"action" jsonschema:"description=Line action: add|update|delete"`
+	Entity   string         `json:"entity" jsonschema:"description=Parent entity: proposals|orders|purchases"`
+	ParentID int64          `json:"parent_id" jsonschema:"description=Parent document ID"`
 	LineID   int64          `json:"line_id,omitempty" jsonschema:"description=Line ID (required for update and delete)"`
 	Data     map[string]any `json:"data,omitempty" jsonschema:"description=Line data: description/qty/unit_price/vat_rate/product_id/discount_percent/product_type/unit_id"`
 }

@@ -11,9 +11,9 @@ import (
 )
 
 type ActionInput struct {
-	Entity      string `json:"entity" jsonschema:"required,description=Entity type: proposals|orders|projects|purchases|shipments|receptions"`
-	ID          int64  `json:"id" jsonschema:"required,description=Entity ID"`
-	Action      string `json:"action" jsonschema:"required,description=Action: validate|close|settodraft|setinvoiced|approve|makeorder|receive"`
+	Entity      string `json:"entity" jsonschema:"description=Entity type: proposals|orders|projects|purchases|shipments|receptions"`
+	ID          int64  `json:"id" jsonschema:"description=Entity ID"`
+	Action      string `json:"action" jsonschema:"description=Action: validate|close|settodraft|setinvoiced|approve|makeorder|receive"`
 	WarehouseID int64  `json:"warehouse_id,omitempty" jsonschema:"description=Warehouse ID (for stock-related actions)"`
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 type GetInput struct {
-	Entity string `json:"entity" jsonschema:"required,description=Entity type: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
+	Entity string `json:"entity" jsonschema:"description=Entity type: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
 	ID     int64  `json:"id,omitempty" jsonschema:"description=Entity ID"`
 	Ref    string `json:"ref,omitempty" jsonschema:"description=Entity reference (alternative to ID)"`
 }
