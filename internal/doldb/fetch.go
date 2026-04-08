@@ -52,6 +52,8 @@ func (d *DB) fetchProposal(ctx context.Context, id int64, ref string) (*Proposal
 		p.total_ht, p.total_tva, p.total_ttc,
 		COALESCE(p.multicurrency_code,''), p.multicurrency_total_ttc,
 		COALESCE(cr.libelle,''), COALESCE(cp.libelle,''), COALESCE(ca.label,''),
+		COALESCE(sm.libelle,''), COALESCE(dr.label,''),
+		COALESCE(ic.code,''), COALESCE(p.location_incoterms,''),
 		COALESCE(p.note_public,''), COALESCE(p.note_private,''),
 		p.datec, p.tms
 	FROM %s p
@@ -60,9 +62,13 @@ func (d *DB) fetchProposal(ctx context.Context, id int64, ref string) (*Proposal
 	LEFT JOIN %s cr ON p.fk_cond_reglement = cr.rowid
 	LEFT JOIN %s cp ON p.fk_mode_reglement = cp.id
 	LEFT JOIN %s ca ON p.fk_availability = ca.rowid
+	LEFT JOIN %s sm ON p.fk_shipping_method = sm.rowid
+	LEFT JOIN %s dr ON p.fk_input_reason = dr.rowid
+	LEFT JOIN %s ic ON p.fk_incoterms = ic.rowid
 	WHERE %s`,
 		d.T("propal"), d.T("societe"), d.T("c_propalst"),
 		d.T("c_payment_term"), d.T("c_paiement"), d.T("c_availability"),
+		d.T("c_shipment_mode"), d.T("c_input_reason"), d.T("c_incoterms"),
 		where)
 
 	var p Proposal
@@ -80,6 +86,8 @@ func (d *DB) fetchProposal(ctx context.Context, id int64, ref string) (*Proposal
 			&p.TotalHT, &p.TotalVAT, &p.TotalTTC,
 			&p.MultiCurrencyCode, &p.MultiCurrencyTTC,
 			&p.PaymentTermLabel, &p.PaymentModeLabel, &p.AvailabilityLabel,
+			&p.ShippingMethodLabel, &p.SourceLabel,
+			&p.IncotermLabel, &p.IncotermLocation,
 			&p.NotePublic, &p.NotePrivate,
 			&datec, &tms,
 		)

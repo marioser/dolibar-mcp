@@ -3,25 +3,31 @@ package mapper
 // MapToDolibarr translates friendly field names to Dolibarr internal names in a payload.
 func MapToDolibarr(data map[string]any) map[string]any {
 	aliases := map[string]string{
-		"customer_id":      "socid",
-		"supplier_id":      "socid",
-		"product_id":       "fk_product",
-		"project_id":       "fk_project",
-		"warehouse_id":     "fk_warehouse",
-		"vat_rate":         "tva_tx",
-		"unit_price":       "subprice",
-		"discount_percent": "remise_percent",
-		"unit_id":          "fk_unit",
-		"payment_term_id":  "fk_cond_reglement",
-		"payment_mode_id":  "fk_mode_reglement",
+		"customer_id":        "socid",
+		"supplier_id":        "socid",
+		"product_id":         "fk_product",
+		"project_id":         "fk_project",
+		"warehouse_id":       "fk_warehouse",
+		"vat_rate":           "tva_tx",
+		"unit_price":         "subprice",
+		"discount_percent":   "remise_percent",
+		"unit_id":            "fk_unit",
+		"payment_term_id":    "fk_cond_reglement",
+		"payment_mode_id":    "fk_mode_reglement",
+		"availability_id":    "availability_id",
+		"source_id":          "demand_reason_id",
+		"demand_reason_id":   "demand_reason_id",
 		"shipping_method_id": "fk_shipping_method",
+		"incoterms_id":       "fk_incoterms",
+		"incoterms_location": "location_incoterms",
 		"description":        "desc",
-		"name":              "nom",
-		"title":             "title",
-		"date":              "date",
-		"due_date":          "date_lim_reglement",
-		"delivery_date":     "date_livraison",
-		"validity_end":      "fin_validite",
+		"label":              "label",
+		"name":               "nom",
+		"title":              "title",
+		"date":               "date",
+		"due_date":           "date_lim_reglement",
+		"delivery_date":      "date_livraison",
+		"validity_end":       "fin_validite",
 	}
 
 	out := make(map[string]any, len(data))
@@ -31,6 +37,20 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		} else {
 			out[k] = v
 		}
+	}
+
+	// Map "extrafields" to "array_options" with options_ prefix on each key
+	if ef, ok := out["extrafields"].(map[string]any); ok {
+		opts := make(map[string]any, len(ef))
+		for k, v := range ef {
+			if len(k) > 8 && k[:8] == "options_" {
+				opts[k] = v
+			} else {
+				opts["options_"+k] = v
+			}
+		}
+		out["array_options"] = opts
+		delete(out, "extrafields")
 	}
 
 	// Map lines recursively

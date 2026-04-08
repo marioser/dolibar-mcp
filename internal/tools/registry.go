@@ -25,7 +25,19 @@ func Register(server *mcp.Server, deps *Deps) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "dolibarr_create",
-		Description: "Create a new entity in Dolibarr. For proposals/orders: include 'lines' array with description, qty, unit_price, vat_rate, product_id. Uses friendly field names (customer_id, product_id, vat_rate).",
+		Description: `Create a new entity in Dolibarr. Uses friendly field names mapped automatically.
+
+For proposals/orders, ALWAYS fill ALL header fields:
+- customer_id (required), date, validity_end, delivery_date
+- payment_term_id, payment_mode_id, availability_id (delivery time)
+- shipping_method_id, source_id (demand reason), incoterms_id, incoterms_location
+- note_public, note_private
+
+Extrafields (custom fields) — use "extrafields": {"field_name": "value"}:
+- Proposals: tos_attached (REQUIRED, values: "NoCgv"|"TOS.pdf"|"DSERRANO_CONDICIONES COMERCIALES S&G.pdf"), asunto (subject text), ref_cliente, jira_key, jira_url
+- Orders: tos_attached (same values as proposals), ref_cliente
+
+Include 'lines' array. Each line MUST have a detailed 'description' that clearly explains what the item/service covers, its scope, and relevant details — NOT just a short label. Also: qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.`,
 	}, deps.HandleCreate)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -40,7 +52,9 @@ func Register(server *mcp.Server, deps *Deps) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "dolibarr_line",
-		Description: "Manage lines on proposals, orders, or purchases. Actions: add, update, delete. For add/update provide: description, qty, unit_price, vat_rate, product_id, discount_percent, product_type (0=product, 1=service), unit_id.",
+		Description: `Manage lines on proposals, orders, or purchases. Actions: add, update, delete.
+For add/update provide: description (MUST be detailed and descriptive, not just a label — explain what the item/service covers), qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.
+For extrafields on lines: use "extrafields": {"field_name": "value"}.`,
 	}, deps.HandleLine)
 
 	mcp.AddTool(server, &mcp.Tool{

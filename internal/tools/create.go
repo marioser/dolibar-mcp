@@ -11,7 +11,7 @@ import (
 
 type CreateInput struct {
 	Entity string         `json:"entity" jsonschema:"Entity to create: customers|products|proposals|projects|orders|purchases|warehouses|shipments|receptions"`
-	Data   map[string]any `json:"data" jsonschema:"Entity data. Use friendly names: customer_id/product_id/vat_rate/unit_price/discount_percent. For docs include lines array."`
+	Data   map[string]any `json:"data" jsonschema:"Entity data with friendly names. For proposals: customer_id, date, validity_end, delivery_date, payment_term_id, payment_mode_id, availability_id, shipping_method_id, source_id, incoterms_id, note_public, note_private, extrafields (object for custom fields), lines (array with detailed description, qty, unit_price, vat_rate, product_type)."`
 }
 
 type WriteOutput struct {
