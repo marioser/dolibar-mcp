@@ -1,5 +1,37 @@
 package mapper
 
+import "time"
+
+// dateFields are Dolibarr fields that expect Unix timestamps
+var dateFields = map[string]bool{
+	"date":               true,
+	"date_livraison":     true,
+	"delivery_date":      true,
+	"fin_validite":       true,
+	"date_lim_reglement": true,
+	"date_commande":      true,
+	"date_start":         true,
+	"date_end":           true,
+}
+
+// toTimestamp converts a date string (YYYY-MM-DD or RFC3339) to Unix timestamp.
+// Returns the original value if conversion fails or if it's already a number.
+func toTimestamp(v any) any {
+	s, ok := v.(string)
+	if !ok {
+		return v // already a number or other type
+	}
+	// Try YYYY-MM-DD
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t.Unix()
+	}
+	// Try RFC3339
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t.Unix()
+	}
+	return v
+}
+
 // MapToDolibarr translates friendly field names to Dolibarr internal names in a payload.
 func MapToDolibarr(data map[string]any) map[string]any {
 	aliases := map[string]string{
@@ -12,8 +44,8 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		"unit_price":         "subprice",
 		"discount_percent":   "remise_percent",
 		"unit_id":            "fk_unit",
-		"payment_term_id":    "fk_cond_reglement",
-		"payment_mode_id":    "fk_mode_reglement",
+		"payment_term_id":    "cond_reglement_id",
+		"payment_mode_id":    "mode_reglement_id",
 		"availability_id":    "availability_id",
 		"source_id":          "demand_reason_id",
 		"demand_reason_id":   "demand_reason_id",
@@ -26,17 +58,21 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		"title":              "title",
 		"date":               "date",
 		"due_date":           "date_lim_reglement",
-		"delivery_date":      "date_livraison",
+		"delivery_date":      "delivery_date",
 		"validity_end":       "fin_validite",
 	}
 
 	out := make(map[string]any, len(data))
 	for k, v := range data {
+		key := k
 		if dolKey, ok := aliases[k]; ok {
-			out[dolKey] = v
-		} else {
-			out[k] = v
+			key = dolKey
 		}
+		// Convert date strings to Unix timestamps for Dolibarr API
+		if dateFields[key] {
+			v = toTimestamp(v)
+		}
+		out[key] = v
 	}
 
 	// Map "extrafields" to "array_options" with options_ prefix on each key
