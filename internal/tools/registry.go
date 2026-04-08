@@ -37,7 +37,7 @@ Extrafields (custom fields) — use "extrafields": {"field_name": "value"}:
 - Proposals: tos_attached (REQUIRED, values: "NoCgv"|"TOS.pdf"|"DSERRANO_CONDICIONES COMERCIALES S&G.pdf"), asunto (subject text), ref_cliente, jira_key, jira_url
 - Orders: tos_attached (same values as proposals), ref_cliente
 
-Include 'lines' array. Each line MUST have a detailed 'description' that clearly explains what the item/service covers, its scope, and relevant details — NOT just a short label. Also: qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.`,
+Include 'lines' array. Each line 'description' MUST be in HTML format and be detailed — explain what the item/service covers, its scope, specs, and relevant details. Use <h3> for title, <p> for paragraphs, <ul>/<ol> for lists, <strong> for emphasis, <table> for data. NEVER use plain text — always HTML. Also: qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.`,
 	}, deps.HandleCreate)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -53,7 +53,7 @@ Include 'lines' array. Each line MUST have a detailed 'description' that clearly
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "dolibarr_line",
 		Description: `Manage lines on proposals, orders, or purchases. Actions: add, update, delete.
-For add/update provide: description (MUST be detailed and descriptive, not just a label — explain what the item/service covers), qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.
+For add/update provide: description (MUST be HTML format — use <h3> for title, <p>, <ul>, <strong>, <table> etc. Be detailed about scope, specs, deliverables), qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.
 For extrafields on lines: use "extrafields": {"field_name": "value"}.`,
 	}, deps.HandleLine)
 

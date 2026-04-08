@@ -14,7 +14,7 @@ type LineInput struct {
 	Entity   string         `json:"entity" jsonschema:"Parent entity: proposals|orders|purchases"`
 	ParentID int64          `json:"parent_id" jsonschema:"Parent document ID"`
 	LineID   int64          `json:"line_id,omitempty" jsonschema:"Line ID (required for update and delete)"`
-	Data     map[string]any `json:"data,omitempty" jsonschema:"Line data: description (detailed text explaining the item), qty, unit_price, vat_rate, product_type (0=product 1=service). Optional: product_id, discount_percent, unit_id, extrafields (object for custom fields)"`
+	Data     map[string]any `json:"data,omitempty" jsonschema:"Line data: description (MUST be HTML with h3/p/ul/strong/table tags), qty, unit_price, vat_rate, product_type (0=product 1=service). Optional: product_id, discount_percent, unit_id, extrafields (object for custom fields)"`
 }
 
 func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input LineInput) (*mcp.CallToolResult, WriteOutput, error) {
