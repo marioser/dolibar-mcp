@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ func New(cfg *config.Config) *Client {
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
 				TLSHandshakeTimeout: 10 * time.Second,
+				ForceAttemptHTTP2:   false,
 			},
 		},
 		baseURL: strings.TrimRight(cfg.APIUrl, "/"),
@@ -48,28 +50,39 @@ func New(cfg *config.Config) *Client {
 func (c *Client) Do(ctx context.Context, method, endpoint string, body any) (json.RawMessage, error) {
 	url := c.baseURL + "/" + strings.TrimLeft(endpoint, "/")
 
-	var reqBody io.Reader
+	var bodyBytes []byte
 	if body != nil {
-		data, err := json.Marshal(body)
+		var err error
+		bodyBytes, err = json.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("marshal body: %w", err)
 		}
-		reqBody = bytes.NewReader(data)
 	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	req.Header.Set("DOLAPIKEY", c.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
 
 	var lastErr error
 	for attempt := range 3 {
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+		}
+
+		var reqBody io.Reader
+		if bodyBytes != nil {
+			reqBody = bytes.NewReader(bodyBytes)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("create request: %w", err)
+		}
+
+		req.Header.Set("DOLAPIKEY", c.apiKey)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("User-Agent", "PrismaMCP/2.0")
+
+		if bodyBytes != nil {
+			req.ContentLength = int64(len(bodyBytes))
+			req.Header.Set("Content-Length", strconv.Itoa(len(bodyBytes)))
 		}
 
 		resp, err := c.http.Do(req)
