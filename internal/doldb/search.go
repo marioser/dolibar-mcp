@@ -334,7 +334,7 @@ func (d *DB) searchProducts(ctx context.Context, p SearchParams) ([]SearchResult
 	}
 
 	selectSQL := fmt.Sprintf(`SELECT p.rowid, p.ref, p.label, p.fk_product_type,
-		p.tosell, p.price, p.price_ttc, p.stock, p.datec %s%s
+		p.tosell, p.price, p.price_ttc, COALESCE(p.stock,0), p.datec %s%s
 		ORDER BY p.ref ASC LIMIT ? OFFSET ?`, base, where)
 	qb.addLimitOffset(p.Limit, p.Offset)
 
@@ -383,7 +383,7 @@ func (d *DB) searchProjects(ctx context.Context, p SearchParams) ([]SearchResult
 	}
 
 	selectSQL := fmt.Sprintf(`SELECT pj.rowid, pj.ref, pj.title, pj.fk_statut,
-		pj.budget_amount, pj.dateo, pj.datee, COALESCE(s.nom,''), COALESCE(s.rowid,0) %s%s
+		COALESCE(pj.budget_amount,0), pj.dateo, pj.datee, COALESCE(s.nom,''), COALESCE(s.rowid,0) %s%s
 		ORDER BY pj.dateo DESC LIMIT ? OFFSET ?`, base, where)
 	qb.addLimitOffset(p.Limit, p.Offset)
 
