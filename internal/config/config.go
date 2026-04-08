@@ -27,6 +27,9 @@ type Config struct {
 
 	// Dolibarr
 	Entity int
+
+	// Auth
+	AuthToken string
 }
 
 func Load() (*Config, error) {
@@ -44,6 +47,7 @@ func Load() (*Config, error) {
 		Transport: envOrDefault("MCP_TRANSPORT", "stdio"),
 		HTTPPort:  envIntOrDefault("MCP_HTTP_PORT", 8080),
 		Entity:    envIntOrDefault("DOLIBARR_ENTITY", 1),
+		AuthToken: envOrDefault("MCP_AUTH_TOKEN", ""),
 	}
 
 	if cfg.DBPass == "" {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/config"
@@ -13,6 +14,17 @@ import (
 	"github.com/sgsoluciones/dolibarr-mcp/internal/doldb"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/tools"
 )
+
+func authMiddleware(token string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth == "" || !strings.HasPrefix(auth, "Bearer ") || strings.TrimPrefix(auth, "Bearer ") != token {
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -48,19 +60,28 @@ func main() {
 
 	if cfg.Transport == "http" {
 		addr := fmt.Sprintf(":%d", cfg.HTTPPort)
-		fmt.Fprintf(os.Stderr, "listening on %s\n", addr)
 
 		handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 			return server
 		}, nil)
+
 		mux := http.NewServeMux()
-		mux.Handle("/mcp", handler)
-		mux.Handle("/mcp/", handler)
 		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"status":"ok","version":"2.0.0"}`))
 		})
 
+		if cfg.AuthToken != "" {
+			fmt.Fprintf(os.Stderr, "auth: Bearer token required\n")
+			mux.Handle("/mcp", authMiddleware(cfg.AuthToken, handler))
+			mux.Handle("/mcp/", authMiddleware(cfg.AuthToken, handler))
+		} else {
+			fmt.Fprintf(os.Stderr, "auth: WARNING - no MCP_AUTH_TOKEN set, server is OPEN\n")
+			mux.Handle("/mcp", handler)
+			mux.Handle("/mcp/", handler)
+		}
+
+		fmt.Fprintf(os.Stderr, "listening on %s\n", addr)
 		if err := http.ListenAndServe(addr, mux); err != nil {
 			log.Fatalf("http server error: %v", err)
 		}
