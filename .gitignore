@@ -1,0 +1,7 @@
+.env
+dolibarr-mcp
+*.exe
+/dist/
+/tmp/
+
+.DS_Store
