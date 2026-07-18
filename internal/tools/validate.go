@@ -6,14 +6,17 @@ import (
 	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
 )
 
-// stripAutoNumberRef removes the document number (ref/ref_ext) for auto-numbered
-// entities so Dolibarr assigns it from its numbering mask instead of honoring a
-// client-supplied value. Customer reference fields (ref_client / customer_ref,
-// and the ref_cliente extrafield) are user data and are left intact.
+// stripAutoNumberRef removes ONLY the document number (ref, e.g. "OF26073159")
+// for auto-numbered entities so Dolibarr assigns it from its numbering mask
+// instead of honoring a client-supplied value.
+//
+// The other reference fields are user/integration data and are left intact:
+//   - ref_ext: ProposalKit's tracking id
+//   - ref_client / customer_ref, and the ref_cliente extrafield: the customer's
+//     order number (e.g. "OC XXX")
 func stripAutoNumberRef(entity string, data map[string]any) {
 	if mapper.IsAutoNumbered(entity) {
 		delete(data, "ref")
-		delete(data, "ref_ext")
 	}
 }
 

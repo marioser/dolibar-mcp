@@ -74,11 +74,12 @@ func TestProposalE2E(t *testing.T) {
 	// #4 — create with a FORCED ref and a customer_ref. The forced number must be
 	// ignored (auto-numbered), while the customer reference must be kept.
 	res, out, err := deps.HandleCreate(ctx, nil, CreateInput{Entity: "proposals", Data: map[string]any{
-		"customer_id":  custID,
-		"ref":          "PK-FORCED-9999",
-		"customer_ref": "MI-REF-CLIENTE",
-		"date":         "2026-07-18",
-		"extrafields":  map[string]any{"tos_attached": "NoCgv"},
+		"customer_id":     custID,
+		"ref":             "PK-FORCED-9999", // OF number → must be ignored
+		"proposalkit_ref": "PKIT-999",       // ProposalKit id (ref_ext) → must be kept
+		"customer_ref":    "MI-REF-CLIENTE", // customer OC → must be kept
+		"date":            "2026-07-18",
+		"extrafields":     map[string]any{"tos_attached": "NoCgv"},
 		"lines": []any{map[string]any{
 			"description": "<p>Linea de prueba e2e</p>", "qty": 1, "unit_price": 100, "vat_rate": 19, "product_type": 1,
 		}},
@@ -101,6 +102,12 @@ func TestProposalE2E(t *testing.T) {
 		t.Errorf("#4 FAIL: customer reference lost (ref_client=%q)", refClient)
 	} else {
 		t.Logf("#4 OK: customer reference preserved (ref_client=%q)", refClient)
+	}
+	refExt, _ := prop["ref_ext"].(string)
+	if refExt != "PKIT-999" {
+		t.Errorf("#4 FAIL: ProposalKit ref lost (ref_ext=%q, want PKIT-999)", refExt)
+	} else {
+		t.Logf("#4 OK: ProposalKit ref preserved (ref_ext=%q)", refExt)
 	}
 
 	// #5 — validate, then close with status=2 (accepted/signed). Must succeed and

@@ -56,8 +56,9 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		"incoterms_id":       "fk_incoterms",
 		"incoterms_location": "location_incoterms",
 		"description":        "desc",
-		"customer_ref":       "ref_client", // customer's own reference ("Ref. cliente"), NOT the proposal number
+		"customer_ref":       "ref_client", // customer's order number ("Ref. cliente" / OC), NOT the proposal number
 		"client_ref":         "ref_client",
+		"proposalkit_ref":    "ref_ext", // ProposalKit tracking id (external reference)
 		"label":              "label",
 		"name":               "nom",
 		"title":              "title",

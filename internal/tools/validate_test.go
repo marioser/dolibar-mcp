@@ -5,10 +5,10 @@ import "testing"
 func TestStripAutoNumberRef(t *testing.T) {
 	// Proposal number is stripped, but customer references are preserved.
 	data := map[string]any{
-		"ref":          "PK-PROP-2026-0006", // forced number → must be removed
-		"ref_ext":      "x",
-		"ref_client":   "CLIENT-REF-1", // customer reference → must stay
-		"customer_ref": "CLIENT-REF-2",
+		"ref":          "PK-PROP-2026-0006", // forced OF number → must be removed
+		"ref_ext":      "PKIT-123",          // ProposalKit tracking id → must stay
+		"ref_client":   "OC-4567",           // customer order number → must stay
+		"customer_ref": "OC-4567",
 		"customer_id":  42,
 	}
 	stripAutoNumberRef("proposals", data)
@@ -16,13 +16,13 @@ func TestStripAutoNumberRef(t *testing.T) {
 	if _, ok := data["ref"]; ok {
 		t.Error("ref (document number) should be stripped for proposals")
 	}
-	if _, ok := data["ref_ext"]; ok {
-		t.Error("ref_ext should be stripped")
+	if data["ref_ext"] != "PKIT-123" {
+		t.Error("ref_ext (ProposalKit id) must be preserved")
 	}
-	if data["ref_client"] != "CLIENT-REF-1" {
-		t.Error("ref_client (customer reference) must be preserved")
+	if data["ref_client"] != "OC-4567" {
+		t.Error("ref_client (customer order number) must be preserved")
 	}
-	if data["customer_ref"] != "CLIENT-REF-2" {
+	if data["customer_ref"] != "OC-4567" {
 		t.Error("customer_ref must be preserved")
 	}
 
