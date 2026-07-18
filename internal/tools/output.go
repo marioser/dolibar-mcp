@@ -2,9 +2,13 @@ package tools
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/sgsoluciones/dolibarr-mcp/internal/dolapi"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
+	"github.com/sgsoluciones/dolibarr-mcp/internal/response"
 )
 
 // WriteOutput is the structured result of a write operation. The upstream API
@@ -41,4 +45,26 @@ func validateEntity(entity string) error {
 		return fmt.Errorf("invalid entity %q. Valid entities: %v", entity, mapper.ValidEntities())
 	}
 	return nil
+}
+
+// writeError turns a write failure into a tool error result. When the cause is
+// a Dolibarr API error, it surfaces the status code and upstream message as
+// structured JSON so the client can distinguish 400 (validation) from 404 (bad
+// id) from 401 (auth) and self-correct. Non-API errors fall back to a wrapped
+// Go error (which the SDK still packs as a tool error).
+func writeError(operation string, err error) (*mcp.CallToolResult, WriteOutput, error) {
+	var apiErr *dolapi.APIError
+	if errors.As(err, &apiErr) {
+		content := response.ToJSON(map[string]any{
+			"error":       true,
+			"operation":   operation,
+			"status_code": apiErr.StatusCode,
+			"message":     apiErr.Message,
+		})
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{Text: content}},
+		}, WriteOutput{}, nil
+	}
+	return nil, WriteOutput{}, fmt.Errorf("%s: %w", operation, err)
 }

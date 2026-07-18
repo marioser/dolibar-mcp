@@ -39,7 +39,7 @@ func (d *Deps) HandleAction(ctx context.Context, req *mcp.CallToolRequest, input
 
 	result, err := d.API.Post(ctx, endpoint, payload)
 	if err != nil {
-		return nil, WriteOutput{}, fmt.Errorf("%s %s/%d: %w", input.Action, input.Entity, input.ID, err)
+		return writeError(fmt.Sprintf("%s %s/%d", input.Action, input.Entity, input.ID), err)
 	}
 
 	return nil, WriteOutput{

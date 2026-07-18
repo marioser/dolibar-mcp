@@ -34,7 +34,7 @@ func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input L
 
 		result, err := d.API.Post(ctx, endpoint, payload)
 		if err != nil {
-			return nil, WriteOutput{}, fmt.Errorf("add line to %s/%d: %w", input.Entity, input.ParentID, err)
+			return writeError(fmt.Sprintf("add line to %s/%d", input.Entity, input.ParentID), err)
 		}
 		return nil, WriteOutput{
 			Success:  true,
@@ -55,7 +55,7 @@ func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input L
 
 		result, err := d.API.Put(ctx, endpoint, payload)
 		if err != nil {
-			return nil, WriteOutput{}, fmt.Errorf("update line %d on %s/%d: %w", input.LineID, input.Entity, input.ParentID, err)
+			return writeError(fmt.Sprintf("update line %d on %s/%d", input.LineID, input.Entity, input.ParentID), err)
 		}
 		return nil, WriteOutput{
 			Success:  true,
@@ -73,7 +73,7 @@ func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input L
 
 		result, err := d.API.Delete(ctx, endpoint)
 		if err != nil {
-			return nil, WriteOutput{}, fmt.Errorf("delete line %d from %s/%d: %w", input.LineID, input.Entity, input.ParentID, err)
+			return writeError(fmt.Sprintf("delete line %d from %s/%d", input.LineID, input.Entity, input.ParentID), err)
 		}
 		return nil, WriteOutput{
 			Success:  true,

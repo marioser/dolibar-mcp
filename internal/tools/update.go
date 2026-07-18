@@ -24,7 +24,7 @@ func (d *Deps) HandleUpdate(ctx context.Context, req *mcp.CallToolRequest, input
 
 	result, err := d.API.Put(ctx, path, payload)
 	if err != nil {
-		return nil, WriteOutput{}, fmt.Errorf("update %s/%d: %w", input.Entity, input.ID, err)
+		return writeError(fmt.Sprintf("update %s/%d", input.Entity, input.ID), err)
 	}
 
 	return nil, WriteOutput{

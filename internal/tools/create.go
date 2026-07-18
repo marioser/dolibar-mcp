@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
@@ -23,7 +22,7 @@ func (d *Deps) HandleCreate(ctx context.Context, req *mcp.CallToolRequest, input
 
 	result, err := d.API.Post(ctx, path, payload)
 	if err != nil {
-		return nil, WriteOutput{}, fmt.Errorf("create %s: %w", input.Entity, err)
+		return writeError("create "+input.Entity, err)
 	}
 
 	return nil, WriteOutput{

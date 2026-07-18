@@ -22,7 +22,7 @@ func (d *Deps) HandleDelete(ctx context.Context, req *mcp.CallToolRequest, input
 
 	result, err := d.API.Delete(ctx, path)
 	if err != nil {
-		return nil, WriteOutput{}, fmt.Errorf("delete %s/%d: %w", input.Entity, input.ID, err)
+		return writeError(fmt.Sprintf("delete %s/%d", input.Entity, input.ID), err)
 	}
 
 	return nil, WriteOutput{

@@ -1,9 +1,12 @@
 package tools
 
 import (
+	"sort"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/dolapi"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/doldb"
+	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
 )
 
 // Deps holds shared dependencies for all tool handlers
@@ -12,19 +15,50 @@ type Deps struct {
 	API *dolapi.Client
 }
 
+// actionEnums returns the sorted, unique entities and verbs supported by the
+// state-change tool, derived from the single ValidActions() source of truth.
+func actionEnums() (entities, verbs []any) {
+	va := mapper.ValidActions()
+	ents := make([]string, 0, len(va))
+	verbSet := map[string]bool{}
+	for ent, vs := range va {
+		ents = append(ents, ent)
+		for _, v := range vs {
+			verbSet[v] = true
+		}
+	}
+	sort.Strings(ents)
+	vs := make([]string, 0, len(verbSet))
+	for v := range verbSet {
+		vs = append(vs, v)
+	}
+	sort.Strings(vs)
+	return anySlice(ents), anySlice(vs)
+}
+
 func Register(server *mcp.Server, deps *Deps) {
+	entityEnum := anySlice(mapper.ValidEntities())
+	lineEntityEnum := anySlice([]string{"proposals", "orders", "purchases"})
+	actionEntityEnum, actionVerbEnum := actionEnums()
+
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_search",
+		Name:        "dolibarr_search",
 		Description: "Search any Dolibarr entity with filters. Entities: customers, products, proposals, projects, orders, purchases, warehouses, shipments, receptions. Supports text search, date range, customer filter, status filter, amount range. Returns compact list.",
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
+		InputSchema: inputSchema[SearchInput](map[string][]any{"entity": entityEnum}),
 	}, deps.HandleSearch)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_get",
+		Name:        "dolibarr_get",
 		Description: "Get full details of a Dolibarr entity by ID or ref, including lines for documents (proposals, orders, purchases). Returns complete entity with all fields.",
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
+		InputSchema: inputSchema[GetInput](map[string][]any{"entity": entityEnum}),
 	}, deps.HandleGet)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_create",
+		Name:        "dolibarr_create",
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(false)},
+		InputSchema: inputSchema[CreateInput](map[string][]any{"entity": entityEnum}),
 		Description: `Create a new entity in Dolibarr. Uses friendly field names mapped automatically.
 
 For proposals/orders, ALWAYS fill ALL header fields:
@@ -41,24 +75,38 @@ Include 'lines' array. Each line 'description' MUST be in HTML format and be det
 	}, deps.HandleCreate)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_update",
+		Name:        "dolibarr_update",
 		Description: "Update an existing Dolibarr entity by ID. Pass only the fields to change.",
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true), IdempotentHint: true},
+		InputSchema: inputSchema[UpdateInput](map[string][]any{"entity": entityEnum}),
 	}, deps.HandleUpdate)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_delete",
+		Name:        "dolibarr_delete",
 		Description: "Delete a Dolibarr entity by ID.",
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true), IdempotentHint: true},
+		InputSchema: inputSchema[DeleteInput](map[string][]any{"entity": entityEnum}),
 	}, deps.HandleDelete)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_line",
+		Name:        "dolibarr_line",
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
+		InputSchema: inputSchema[LineInput](map[string][]any{
+			"entity": lineEntityEnum,
+			"action": anySlice([]string{"add", "update", "delete"}),
+		}),
 		Description: `Manage lines on proposals, orders, or purchases. Actions: add, update, delete.
 For add/update provide: description (MUST be HTML format — use <h3> for title, <p>, <ul>, <strong>, <table> etc. Be detailed about scope, specs, deliverables), qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.
 For extrafields on lines: use "extrafields": {"field_name": "value"}.`,
 	}, deps.HandleLine)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "dolibarr_action",
+		Name:        "dolibarr_action",
 		Description: "Change state of a Dolibarr document. Actions by entity — proposals: validate, close, settodraft, setinvoiced; orders: validate, close; projects: validate; purchases: validate, approve, makeorder, receive; shipments/receptions: validate, close.",
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
+		InputSchema: inputSchema[ActionInput](map[string][]any{
+			"entity": actionEntityEnum,
+			"action": actionVerbEnum,
+		}),
 	}, deps.HandleAction)
 }
