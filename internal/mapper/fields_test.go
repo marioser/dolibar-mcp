@@ -141,6 +141,35 @@ func TestValidEntities(t *testing.T) {
 	}
 }
 
+func TestIsAutoNumbered(t *testing.T) {
+	for _, e := range []string{"proposals", "orders", "purchases", "projects", "shipments", "receptions"} {
+		if !IsAutoNumbered(e) {
+			t.Errorf("%s should be auto-numbered", e)
+		}
+	}
+	for _, e := range []string{"products", "customers", "warehouses"} {
+		if IsAutoNumbered(e) {
+			t.Errorf("%s should NOT be auto-numbered (user-defined ref)", e)
+		}
+	}
+}
+
+func TestIsValidTOSAttached(t *testing.T) {
+	if !IsValidTOSAttached("NoCgv") || !IsValidTOSAttached("TOS.pdf") {
+		t.Error("known TOS values should be valid")
+	}
+	if IsValidTOSAttached("TOS") {
+		t.Error(`"TOS" is not a valid tos_attached value`)
+	}
+}
+
+func TestMapToDolibarr_CustomerRefAlias(t *testing.T) {
+	out := MapToDolibarr(map[string]any{"customer_ref": "ABC", "client_ref": "DEF"})
+	if out["ref_client"] != "DEF" && out["ref_client"] != "ABC" {
+		t.Errorf("customer_ref/client_ref should map to ref_client: %#v", out)
+	}
+}
+
 func TestValidActions(t *testing.T) {
 	actions := ValidActions()
 	proposals, ok := actions["proposals"]

@@ -17,6 +17,13 @@ func (d *Deps) HandleCreate(ctx context.Context, req *mcp.CallToolRequest, input
 		return nil, WriteOutput{}, err
 	}
 
+	// Let Dolibarr auto-number the document; validate the create contract before
+	// mapping friendly names to Dolibarr fields.
+	stripAutoNumberRef(input.Entity, input.Data)
+	if err := validateCreate(input.Entity, input.Data); err != nil {
+		return nil, WriteOutput{}, err
+	}
+
 	path := mapper.EntityToAPIPath(input.Entity)
 	payload := mapper.MapToDolibarr(input.Data)
 
