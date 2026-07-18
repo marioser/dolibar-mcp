@@ -1,6 +1,9 @@
 package mapper
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // dateFields are Dolibarr fields that expect Unix timestamps
 var dateFields = map[string]bool{
@@ -137,6 +140,11 @@ func ValidEntities() []string {
 		"customers", "products", "proposals", "projects",
 		"orders", "purchases", "warehouses", "shipments", "receptions",
 	}
+}
+
+// IsValidEntity reports whether entity is one of the supported entity names.
+func IsValidEntity(entity string) bool {
+	return slices.Contains(ValidEntities(), entity)
 }
 
 // ValidActions returns valid state-change actions per entity

@@ -7,7 +7,6 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
-	"github.com/sgsoluciones/dolibarr-mcp/internal/response"
 )
 
 type ActionInput struct {
@@ -43,11 +42,11 @@ func (d *Deps) HandleAction(ctx context.Context, req *mcp.CallToolRequest, input
 		return nil, WriteOutput{}, fmt.Errorf("%s %s/%d: %w", input.Action, input.Entity, input.ID, err)
 	}
 
-	return nil, WriteOutput{Result: response.ToJSON(map[string]any{
-		"success": true,
-		"entity":  input.Entity,
-		"id":      input.ID,
-		"action":  input.Action,
-		"result":  string(result),
-	})}, nil
+	return nil, WriteOutput{
+		Success: true,
+		Entity:  input.Entity,
+		ID:      input.ID,
+		Action:  input.Action,
+		Result:  parseResult(result),
+	}, nil
 }

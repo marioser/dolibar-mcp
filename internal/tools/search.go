@@ -22,11 +22,17 @@ type SearchInput struct {
 	Offset     int      `json:"offset,omitempty" jsonschema:"Offset for pagination"`
 }
 
+// SearchOutput carries the compact result set as decoded JSON so it reaches the
+// client as a single un-escaped object rather than a JSON string.
 type SearchOutput struct {
-	Result string `json:"result" jsonschema:"JSON search results"`
+	Result any `json:"result"`
 }
 
 func (d *Deps) HandleSearch(ctx context.Context, req *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, SearchOutput, error) {
+	if err := validateEntity(input.Entity); err != nil {
+		return nil, SearchOutput{}, err
+	}
+
 	results, total, err := d.DB.Search(ctx, doldb.SearchParams{
 		Entity:     input.Entity,
 		Query:      input.Query,
@@ -51,5 +57,5 @@ func (d *Deps) HandleSearch(ctx context.Context, req *mcp.CallToolRequest, input
 		resp.Results[i] = r
 	}
 
-	return nil, SearchOutput{Result: response.ToJSON(resp)}, nil
+	return nil, SearchOutput{Result: resp}, nil
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
-	"github.com/sgsoluciones/dolibarr-mcp/internal/response"
 )
 
 type UpdateInput struct {
@@ -16,6 +15,10 @@ type UpdateInput struct {
 }
 
 func (d *Deps) HandleUpdate(ctx context.Context, req *mcp.CallToolRequest, input UpdateInput) (*mcp.CallToolResult, WriteOutput, error) {
+	if err := validateEntity(input.Entity); err != nil {
+		return nil, WriteOutput{}, err
+	}
+
 	path := fmt.Sprintf("%s/%d", mapper.EntityToAPIPath(input.Entity), input.ID)
 	payload := mapper.MapToDolibarr(input.Data)
 
@@ -24,10 +27,10 @@ func (d *Deps) HandleUpdate(ctx context.Context, req *mcp.CallToolRequest, input
 		return nil, WriteOutput{}, fmt.Errorf("update %s/%d: %w", input.Entity, input.ID, err)
 	}
 
-	return nil, WriteOutput{Result: response.ToJSON(map[string]any{
-		"success": true,
-		"entity":  input.Entity,
-		"id":      input.ID,
-		"result":  string(result),
-	})}, nil
+	return nil, WriteOutput{
+		Success: true,
+		Entity:  input.Entity,
+		ID:      input.ID,
+		Result:  parseResult(result),
+	}, nil
 }

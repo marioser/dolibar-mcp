@@ -6,7 +6,6 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/mapper"
-	"github.com/sgsoluciones/dolibarr-mcp/internal/response"
 )
 
 type LineInput struct {
@@ -18,6 +17,10 @@ type LineInput struct {
 }
 
 func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input LineInput) (*mcp.CallToolResult, WriteOutput, error) {
+	if err := validateEntity(input.Entity); err != nil {
+		return nil, WriteOutput{}, err
+	}
+
 	apiPath := mapper.EntityToAPIPath(input.Entity)
 
 	switch input.Action {
@@ -33,12 +36,12 @@ func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input L
 		if err != nil {
 			return nil, WriteOutput{}, fmt.Errorf("add line to %s/%d: %w", input.Entity, input.ParentID, err)
 		}
-		return nil, WriteOutput{Result: response.ToJSON(map[string]any{
-			"success":   true,
-			"action":    "add",
-			"parent_id": input.ParentID,
-			"result":    string(result),
-		})}, nil
+		return nil, WriteOutput{
+			Success:  true,
+			Action:   "add",
+			ParentID: input.ParentID,
+			Result:   parseResult(result),
+		}, nil
 
 	case "update":
 		if input.LineID == 0 {
@@ -54,13 +57,13 @@ func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input L
 		if err != nil {
 			return nil, WriteOutput{}, fmt.Errorf("update line %d on %s/%d: %w", input.LineID, input.Entity, input.ParentID, err)
 		}
-		return nil, WriteOutput{Result: response.ToJSON(map[string]any{
-			"success":   true,
-			"action":    "update",
-			"parent_id": input.ParentID,
-			"line_id":   input.LineID,
-			"result":    string(result),
-		})}, nil
+		return nil, WriteOutput{
+			Success:  true,
+			Action:   "update",
+			ParentID: input.ParentID,
+			LineID:   input.LineID,
+			Result:   parseResult(result),
+		}, nil
 
 	case "delete":
 		if input.LineID == 0 {
@@ -72,13 +75,13 @@ func (d *Deps) HandleLine(ctx context.Context, req *mcp.CallToolRequest, input L
 		if err != nil {
 			return nil, WriteOutput{}, fmt.Errorf("delete line %d from %s/%d: %w", input.LineID, input.Entity, input.ParentID, err)
 		}
-		return nil, WriteOutput{Result: response.ToJSON(map[string]any{
-			"success":   true,
-			"action":    "delete",
-			"parent_id": input.ParentID,
-			"line_id":   input.LineID,
-			"result":    string(result),
-		})}, nil
+		return nil, WriteOutput{
+			Success:  true,
+			Action:   "delete",
+			ParentID: input.ParentID,
+			LineID:   input.LineID,
+			Result:   parseResult(result),
+		}, nil
 
 	default:
 		return nil, WriteOutput{}, fmt.Errorf("invalid action: %s (expected add, update, or delete)", input.Action)

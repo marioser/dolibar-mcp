@@ -59,10 +59,23 @@ func (c *Client) Do(ctx context.Context, method, endpoint string, body any) (jso
 		}
 	}
 
+	// Only idempotent methods are retried. POST is not idempotent — retrying a
+	// create that may have already succeeded (timeout/502 after the record was
+	// written) would duplicate proposals, orders, or lines.
+	maxAttempts := 3
+	if method == http.MethodPost {
+		maxAttempts = 1
+	}
+
 	var lastErr error
-	for attempt := range 3 {
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+			// Context-aware backoff: abort immediately if the caller cancelled.
+			select {
+			case <-time.After(time.Duration(attempt) * 500 * time.Millisecond):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 		}
 
 		var reqBody io.Reader
@@ -98,8 +111,8 @@ func (c *Client) Do(ctx context.Context, method, endpoint string, body any) (jso
 			continue
 		}
 
-		if resp.StatusCode >= 500 && attempt < 2 {
-			lastErr = &APIError{StatusCode: resp.StatusCode, Raw: string(respBody)}
+		if resp.StatusCode >= 500 && attempt < maxAttempts-1 {
+			lastErr = &APIError{StatusCode: resp.StatusCode, Message: string(respBody), Raw: string(respBody)}
 			continue
 		}
 
