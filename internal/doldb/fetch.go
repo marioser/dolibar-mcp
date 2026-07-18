@@ -209,11 +209,14 @@ func (d *DB) fetchOrder(ctx context.Context, id int64, ref string) (*Order, erro
 		o.Currency = d.dolCfg.MainCurrency
 	}
 
-	o.Lines, err = d.fetchOrderLines(ctx, o.ID)
+	o.Lines, err = d.fetchOrderLikeLines(ctx, "commandedet", o.ID)
 	return &o, err
 }
 
-func (d *DB) fetchOrderLines(ctx context.Context, orderID int64) ([]OrderLine, error) {
+// fetchOrderLikeLines reads order-style lines. Orders (llx_commandedet) and
+// supplier orders (llx_commande_fournisseurdet) share an identical line shape
+// and the same fk_commande foreign key, so one helper serves both.
+func (d *DB) fetchOrderLikeLines(ctx context.Context, table string, orderID int64) ([]OrderLine, error) {
 	q := fmt.Sprintf(`SELECT d.rowid, COALESCE(d.description,''), d.fk_product,
 		COALESCE(pr.ref,''), COALESCE(pr.label,''),
 		d.qty, d.subprice, d.tva_tx, d.remise_percent,
@@ -221,7 +224,7 @@ func (d *DB) fetchOrderLines(ctx context.Context, orderID int64) ([]OrderLine, e
 	FROM %s d
 	LEFT JOIN %s pr ON d.fk_product = pr.rowid
 	WHERE d.fk_commande = ?
-	ORDER BY d.rang`, d.T("commandedet"), d.T("product"))
+	ORDER BY d.rang`, d.T(table), d.T("product"))
 
 	rows, err := d.QueryContext(ctx, q, orderID)
 	if err != nil {
@@ -284,40 +287,8 @@ func (d *DB) fetchPurchase(ctx context.Context, id int64, ref string) (*Supplier
 		o.Currency = d.dolCfg.MainCurrency
 	}
 
-	o.Lines, err = d.fetchPurchaseLines(ctx, o.ID)
+	o.Lines, err = d.fetchOrderLikeLines(ctx, "commande_fournisseurdet", o.ID)
 	return &o, err
-}
-
-func (d *DB) fetchPurchaseLines(ctx context.Context, orderID int64) ([]OrderLine, error) {
-	q := fmt.Sprintf(`SELECT d.rowid, COALESCE(d.description,''), d.fk_product,
-		COALESCE(pr.ref,''), COALESCE(pr.label,''),
-		d.qty, d.subprice, d.tva_tx, d.remise_percent,
-		d.total_ht, d.total_ttc, d.product_type, d.rang
-	FROM %s d
-	LEFT JOIN %s pr ON d.fk_product = pr.rowid
-	WHERE d.fk_commande = ?
-	ORDER BY d.rang`, d.T("commande_fournisseurdet"), d.T("product"))
-
-	rows, err := d.QueryContext(ctx, q, orderID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var lines []OrderLine
-	for rows.Next() {
-		var l OrderLine
-		var productID sql.NullInt64
-		if err := rows.Scan(&l.ID, &l.Description, &productID,
-			&l.ProductRef, &l.ProductLabel,
-			&l.Qty, &l.UnitPrice, &l.VATRate, &l.DiscountPercent,
-			&l.TotalHT, &l.TotalTTC, &l.ProductType, &l.Rank); err != nil {
-			return nil, err
-		}
-		l.ProductID = ScanNullInt64(productID)
-		lines = append(lines, l)
-	}
-	return lines, nil
 }
 
 // --- CUSTOMERS ---
