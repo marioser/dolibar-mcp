@@ -531,20 +531,24 @@ func (d *DB) searchReceptions(ctx context.Context, p SearchParams) ([]SearchResu
 	return results, total, nil
 }
 
-// statusLabel helper
+// statusLabels maps numeric status codes to labels per entity. Package-level so
+// it is allocated once, not rebuilt on every scanned row. Kept in doldb (rather
+// than importing response.StatusName) to avoid an import cycle; values are the
+// labels used for list results.
+var statusLabels = map[string]map[int]string{
+	"proposals":  {0: "Draft", 1: "Validated", 2: "Signed", 3: "Not signed", 4: "Billed"},
+	"orders":     {-1: "Cancelled", 0: "Draft", 1: "Validated", 2: "Shipped partially", 3: "Shipped completely"},
+	"purchases":  {0: "Draft", 1: "Validated", 2: "Approved", 3: "Ordered", 4: "Received partially", 5: "Received completely", 6: "Cancelled", 9: "Refused"},
+	"projects":   {0: "Draft", 1: "Open", 2: "Closed"},
+	"shipments":  {0: "Draft", 1: "Validated", 2: "Closed"},
+	"receptions": {0: "Draft", 1: "Validated", 2: "Closed"},
+	"customers":  {0: "Closed", 1: "Active"},
+	"warehouses": {0: "Closed", 1: "Open"},
+}
+
+// statusLabel returns the label for an entity's status code.
 func statusLabel(entity string, code int) string {
-	// Inline map for performance - same data as response.StatusName but avoids import cycle
-	m := map[string]map[int]string{
-		"proposals":  {0: "Draft", 1: "Validated", 2: "Signed", 3: "Not signed", 4: "Billed"},
-		"orders":     {-1: "Cancelled", 0: "Draft", 1: "Validated", 2: "Shipped partially", 3: "Shipped completely"},
-		"purchases":  {0: "Draft", 1: "Validated", 2: "Approved", 3: "Ordered", 4: "Received partially", 5: "Received completely", 6: "Cancelled", 9: "Refused"},
-		"projects":   {0: "Draft", 1: "Open", 2: "Closed"},
-		"shipments":  {0: "Draft", 1: "Validated", 2: "Closed"},
-		"receptions": {0: "Draft", 1: "Validated", 2: "Closed"},
-		"customers":  {0: "Closed", 1: "Active"},
-		"warehouses": {0: "Closed", 1: "Open"},
-	}
-	if em, ok := m[entity]; ok {
+	if em, ok := statusLabels[entity]; ok {
 		if l, ok := em[code]; ok {
 			return l
 		}
