@@ -8,8 +8,8 @@ import (
 
 // SearchResponse is the compact format for list results
 type SearchResponse struct {
-	Count   int    `json:"count"`
-	Results []any  `json:"results"`
+	Count   int   `json:"count"`
+	Results []any `json:"results"`
 }
 
 // FormatDate returns date in YYYY-MM-DD or empty
