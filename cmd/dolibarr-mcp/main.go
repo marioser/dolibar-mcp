@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,9 +17,12 @@ import (
 )
 
 func authMiddleware(token string, next http.Handler) http.Handler {
+	expected := []byte(token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
-		if auth == "" || !strings.HasPrefix(auth, "Bearer ") || strings.TrimPrefix(auth, "Bearer ") != token {
+		presented, ok := strings.CutPrefix(auth, "Bearer ")
+		// Constant-time compare avoids leaking the token via response timing.
+		if !ok || subtle.ConstantTimeCompare([]byte(presented), expected) != 1 {
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
