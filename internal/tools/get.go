@@ -15,8 +15,12 @@ type GetInput struct {
 
 // GetOutput carries the entity as decoded JSON so it reaches the client as a
 // single un-escaped object rather than a JSON string.
+// The jsonschema description is load-bearing, not cosmetic: an untagged `any`
+// infers the empty schema, which jsonschema-go marshals as the boolean `true`,
+// and strict MCP clients reject the whole tools/list on it. Describing the
+// field yields an object schema while staying type-permissive.
 type GetOutput struct {
-	Result any `json:"result"`
+	Result any `json:"result" jsonschema:"Entity details as decoded JSON (object, array or scalar)"`
 }
 
 func (d *Deps) HandleGet(ctx context.Context, req *mcp.CallToolRequest, input GetInput) (*mcp.CallToolResult, GetOutput, error) {
