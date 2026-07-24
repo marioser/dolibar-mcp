@@ -24,8 +24,9 @@ type SearchInput struct {
 
 // SearchOutput carries the compact result set as decoded JSON so it reaches the
 // client as a single un-escaped object rather than a JSON string.
+// The jsonschema description on Result is load-bearing — see GetOutput.
 type SearchOutput struct {
-	Result any `json:"result"`
+	Result any `json:"result" jsonschema:"Search results as decoded JSON (object, array or scalar)"`
 }
 
 func (d *Deps) HandleSearch(ctx context.Context, req *mcp.CallToolRequest, input SearchInput) (*mcp.CallToolResult, SearchOutput, error) {

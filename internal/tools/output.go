@@ -21,7 +21,8 @@ type WriteOutput struct {
 	Action   string `json:"action,omitempty"`
 	ParentID int64  `json:"parent_id,omitempty"`
 	LineID   int64  `json:"line_id,omitempty"`
-	Result   any    `json:"result,omitempty"`
+	// The jsonschema description is load-bearing — see GetOutput.
+	Result any `json:"result,omitempty" jsonschema:"Upstream Dolibarr API response as decoded JSON (object, array or scalar)"`
 }
 
 // parseResult decodes a raw API JSON response into a Go value so it embeds as
