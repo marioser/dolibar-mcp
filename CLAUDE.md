@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 An MCP (Model Context Protocol) server that exposes a Dolibarr ERP instance to LLM
-clients through 8 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
+clients through 9 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
 
 ## Commands
 

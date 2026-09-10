@@ -52,7 +52,7 @@ func main() {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "dolibarr-mcp",
-			Version: "2.3.0",
+			Version: "2.4.0",
 		},
 		nil,
 	)
@@ -60,7 +60,7 @@ func main() {
 	deps := &tools.Deps{DB: db, API: apiClient}
 	tools.Register(server, deps)
 
-	fmt.Fprintf(os.Stderr, "dolibarr-mcp v2.3.0 ready (transport=%s, 8 tools)\n", cfg.Transport)
+	fmt.Fprintf(os.Stderr, "dolibarr-mcp v2.4.0 ready (transport=%s, 9 tools)\n", cfg.Transport)
 
 	if cfg.Transport == "http" {
 		addr := fmt.Sprintf(":%d", cfg.HTTPPort)
@@ -72,7 +72,7 @@ func main() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok","version":"2.3.0"}`))
+			w.Write([]byte(`{"status":"ok","version":"2.4.0"}`))
 		})
 
 		if cfg.AuthToken != "" {

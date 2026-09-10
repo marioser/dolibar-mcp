@@ -138,6 +138,21 @@ Each element accepts 13 columns. Required: code, level, label. Optional: parent_
 	}, deps.HandlePEPBudget)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name: "dolibarr_document",
+		Description: `Attach a file to a Dolibarr document, or see what is already attached.
+
+action=upload: attaches a file. It needs the entity's REF (e.g. PJ2012-0080), not its id — the file is stored in a directory named after that reference. 'content' MUST be base64; sending raw text stores a corrupted file and is rejected before the request leaves.
+action=list: returns the files attached to an entity, by id or ref.
+
+Entities that carry documents: projects, tasks, proposals, orders, purchases, customers, shipments, receptions, products.`,
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(false)},
+		InputSchema: inputSchema[DocumentInput](map[string][]any{
+			"action": anySlice([]string{DocumentActionUpload, DocumentActionList}),
+			"entity": anySlice(documentEntities()),
+		}),
+	}, deps.HandleDocument)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "dolibarr_action",
 		Description: "Change state of a Dolibarr document. Actions by entity — proposals: validate, close, settodraft, setinvoiced; orders: validate, close; projects: validate; purchases: validate, approve, makeorder, receive; shipments/receptions: validate, close. To SIGN/APPROVE a proposal, first 'validate' it, then 'close' it WITH status=2 (accepted/signed) or status=3 (refused) — closing a proposal requires the status field.",
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
