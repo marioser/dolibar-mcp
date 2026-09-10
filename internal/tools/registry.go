@@ -80,6 +80,12 @@ To attach an existing proposal/order/purchase to a project, do NOT use this tool
 project: update the DOCUMENT with "project_id": <project id>. That is how Dolibarr links
 a document to a project.
 
+For tasks (the work breakdown of a project):
+- label (REQUIRED) and project_id (REQUIRED — a task with no parent is orphaned)
+- description, date_start, date_end, planned_hours (IN SECONDS: 8h = 28800), progress (0-100)
+Logging actual hours worked is NOT available: Dolibarr 23's addtimespent endpoint is
+broken upstream. planned_hours is the estimate, not time spent.
+
 Extrafields (custom fields) — use "extrafields": {"field_name": "value"}:
 - Proposals: tos_attached (REQUIRED, values: "NoCgv"|"TOS.pdf"|"DSERRANO_CONDICIONES COMERCIALES S&G.pdf"), asunto (subject text), ref_cliente, jira_key, jira_url
 - Orders: tos_attached (same values as proposals), ref_cliente

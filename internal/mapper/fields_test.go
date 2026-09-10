@@ -133,7 +133,7 @@ func TestEntityToLinePath(t *testing.T) {
 func TestValidEntities(t *testing.T) {
 	got := ValidEntities()
 	want := []string{
-		"customers", "products", "proposals", "projects",
+		"customers", "products", "proposals", "projects", "tasks",
 		"orders", "purchases", "warehouses", "shipments", "receptions",
 	}
 	if !reflect.DeepEqual(got, want) {

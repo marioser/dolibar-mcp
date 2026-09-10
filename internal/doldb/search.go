@@ -41,6 +41,8 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 		return d.searchProducts(ctx, p)
 	case "projects":
 		return d.searchProjects(ctx, p)
+	case "tasks":
+		return d.searchTasks(ctx, p)
 	case "warehouses":
 		return d.searchWarehouses(ctx, p)
 	case "shipments":
@@ -409,6 +411,54 @@ func (d *DB) searchProjects(ctx context.Context, p SearchParams) ([]SearchResult
 	return results, total, nil
 }
 
+// searchTasks lists project tasks. CustomerID filters by the customer of the
+// parent project, which is how a caller narrows tasks down without knowing
+// project ids; TotalHT carries the planned workload, the only figure a task has.
+func (d *DB) searchTasks(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
+	qb := newQB()
+	qb.addEntity("t", d.Entity())
+	qb.addCustomerID("pj.fk_soc", p.CustomerID)
+	qb.addStatus("t.fk_statut", p.Status)
+	qb.addDateRange("t.dateo", p.DateFrom, p.DateTo)
+	qb.addTextSearch(p.Query, "t.ref", "t.label", "t.description")
+
+	base := fmt.Sprintf(`FROM %s t LEFT JOIN %s pj ON pj.rowid = t.fk_projet
+		LEFT JOIN %s s ON s.rowid = pj.fk_soc`,
+		d.T("projet_task"), d.T("projet"), d.T("societe"))
+	where := qb.where()
+
+	var total int
+	if err := d.QueryRowContext(ctx, "SELECT COUNT(*) "+base+where, qb.args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	selectSQL := fmt.Sprintf(`SELECT t.rowid, t.ref, t.label, t.fk_statut,
+		COALESCE(t.planned_workload,0), t.dateo, t.datee, COALESCE(s.nom,''), COALESCE(s.rowid,0) %s%s
+		ORDER BY t.dateo DESC, t.rang LIMIT ? OFFSET ?`, base, where)
+	qb.addLimitOffset(p.Limit, p.Offset)
+
+	rows, err := d.QueryContext(ctx, selectSQL, qb.args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var results []SearchResult
+	for rows.Next() {
+		var r SearchResult
+		var dateStart, dateEnd NullableTime
+		if err := rows.Scan(&r.ID, &r.Ref, &r.Label, &r.StatusCode,
+			&r.TotalHT, &dateStart, &dateEnd, &r.Customer, &r.CustomerID); err != nil {
+			return nil, 0, err
+		}
+		r.Status = statusLabel("tasks", r.StatusCode)
+		r.Date = dateStart.TimePtr()
+		r.DateEnd = dateEnd.TimePtr()
+		results = append(results, r)
+	}
+	return results, total, nil
+}
+
 func (d *DB) searchWarehouses(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
 	qb := newQB()
 	qb.addEntity("w", d.Entity())
@@ -540,6 +590,7 @@ var statusLabels = map[string]map[int]string{
 	"orders":     {-1: "Cancelled", 0: "Draft", 1: "Validated", 2: "Shipped partially", 3: "Shipped completely"},
 	"purchases":  {0: "Draft", 1: "Validated", 2: "Approved", 3: "Ordered", 4: "Received partially", 5: "Received completely", 6: "Cancelled", 9: "Refused"},
 	"projects":   {0: "Draft", 1: "Open", 2: "Closed"},
+	"tasks":      {0: "Draft", 1: "Validated", 2: "Closed"},
 	"shipments":  {0: "Draft", 1: "Validated", 2: "Closed"},
 	"receptions": {0: "Draft", 1: "Validated", 2: "Closed"},
 	"customers":  {0: "Closed", 1: "Active"},
