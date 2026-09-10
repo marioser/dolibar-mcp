@@ -401,8 +401,57 @@ func (d *DB) fetchProject(ctx context.Context, id int64, ref string) (*Project, 
 	pj.DateCreated = ScanNullTime(datec)
 	pj.StatusLabel = statusLabel("projects", pj.Status)
 
+	pj.Extrafields, _ = d.fetchProjectExtrafields(ctx, pj.ID)
 	pj.Tasks, _ = d.fetchProjectTasks(ctx, pj.ID)
 	return &pj, nil
+}
+
+// fetchProjectExtrafields reads the project's custom fields. Writes already accept
+// them (the mapper turns "extrafields" into array_options), so without this the
+// caller can set a value and never read it back to confirm it landed.
+//
+// The extrafields table has one column per configured field, and those differ per
+// instance, so the columns are discovered at query time rather than hardcoded.
+func (d *DB) fetchProjectExtrafields(ctx context.Context, projectID int64) (map[string]any, error) {
+	q := fmt.Sprintf("SELECT * FROM %s WHERE fk_object = ?", d.T("projet_extrafields"))
+	rows, err := d.QueryContext(ctx, q, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+	if !rows.Next() {
+		return nil, rows.Err()
+	}
+
+	holders := make([]any, len(cols))
+	for i := range holders {
+		holders[i] = new(sql.RawBytes)
+	}
+	if err := rows.Scan(holders...); err != nil {
+		return nil, err
+	}
+
+	out := make(map[string]any, len(cols))
+	for i, name := range cols {
+		// rowid and fk_object are plumbing, not custom fields.
+		if name == "rowid" || name == "fk_object" {
+			continue
+		}
+		raw := holders[i].(*sql.RawBytes)
+		if len(*raw) == 0 {
+			continue
+		}
+		out[name] = string(*raw)
+	}
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out, rows.Err()
 }
 
 func (d *DB) fetchProjectTasks(ctx context.Context, projectID int64) ([]ProjectTask, error) {

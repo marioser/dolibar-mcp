@@ -35,6 +35,28 @@ func toTimestamp(v any) any {
 	return v
 }
 
+// nativeDescriptionEntities keep their description under "description". The generic
+// alias renames it to "desc", which is correct for proposal and order lines but wrong
+// for these documents: Dolibarr answers 200 and silently discards the unknown field,
+// so the text is lost without any error to notice.
+var nativeDescriptionEntities = map[string]bool{
+	"projects": true,
+}
+
+// MapEntityToDolibarr translates a document payload to Dolibarr's internal names,
+// honoring the entity so fields that differ between a document and its lines are not
+// confused. Prefer it over MapToDolibarr wherever the entity is known.
+func MapEntityToDolibarr(entity string, data map[string]any) map[string]any {
+	out := MapToDolibarr(data)
+	if nativeDescriptionEntities[entity] {
+		if v, ok := out["desc"]; ok {
+			out["description"] = v
+			delete(out, "desc")
+		}
+	}
+	return out
+}
+
 // MapToDolibarr translates friendly field names to Dolibarr internal names in a payload.
 func MapToDolibarr(data map[string]any) map[string]any {
 	aliases := map[string]string{
@@ -66,6 +88,13 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		"due_date":           "date_lim_reglement",
 		"delivery_date":      "delivery_date",
 		"validity_end":       "fin_validite",
+		// Project header. These Dolibarr names were confirmed to round-trip through
+		// PUT /projects/{id}; without an alias the caller has to guess them.
+		"budget":                "budget_amount",
+		"is_public":             "public",
+		"opportunity_amount":    "opp_amount",
+		"opportunity_percent":   "opp_percent",
+		"opportunity_status_id": "fk_opp_status",
 	}
 
 	out := make(map[string]any, len(data))

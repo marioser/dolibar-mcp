@@ -25,7 +25,7 @@ func (d *Deps) HandleCreate(ctx context.Context, req *mcp.CallToolRequest, input
 	}
 
 	path := mapper.EntityToAPIPath(input.Entity)
-	payload := mapper.MapToDolibarr(input.Data)
+	payload := mapper.MapEntityToDolibarr(input.Entity, input.Data)
 
 	result, err := d.API.Post(ctx, path, payload)
 	if err != nil {

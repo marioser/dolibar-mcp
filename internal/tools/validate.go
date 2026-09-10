@@ -32,6 +32,12 @@ func validateCreate(entity string, data map[string]any) error {
 		if !hasValue(data, "supplier_id", "socid") {
 			return fmt.Errorf("supplier_id is required to create a purchase")
 		}
+	case "projects":
+		// Dolibarr marks title mandatory on the project resource; without it the
+		// document is created unusable rather than rejected.
+		if !hasValue(data, "title", "label") {
+			return fmt.Errorf("title is required to create a project")
+		}
 	}
 
 	// tos_attached: required for proposals, and validated against the allowed
