@@ -61,4 +61,13 @@ func TestProjectExtrafieldsAreReadBack(t *testing.T) {
 	if got := pj.Extrafields["jira_key"]; got != stored {
 		t.Fatalf("jira_key = %#v, want %q as stored in the database", got, stored)
 	}
+
+	// The table carries Dolibarr's own bookkeeping columns alongside the custom
+	// fields. Returning those as if they were business data misleads a caller
+	// into thinking "tms" is a field somebody configured.
+	for _, plumbing := range []string{"tms", "import_key", "rowid", "fk_object"} {
+		if _, leaked := pj.Extrafields[plumbing]; leaked {
+			t.Errorf("extrafields exposed the plumbing column %q: %#v", plumbing, pj.Extrafields)
+		}
+	}
 }

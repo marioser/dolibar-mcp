@@ -439,6 +439,16 @@ func (d *DB) fetchTask(ctx context.Context, id int64, ref string) (*ProjectTask,
 	return &t, nil
 }
 
+// extrafieldPlumbing are Dolibarr's own columns in every *_extrafields table.
+// They sit alongside the configured custom fields, and returning them would tell
+// a caller that "tms" is a field somebody set up, which it is not.
+var extrafieldPlumbing = map[string]bool{
+	"rowid":      true,
+	"fk_object":  true,
+	"tms":        true, // row modification timestamp
+	"import_key": true,
+}
+
 // fetchProjectExtrafields reads the project's custom fields. Writes already accept
 // them (the mapper turns "extrafields" into array_options), so without this the
 // caller can set a value and never read it back to confirm it landed.
@@ -471,8 +481,7 @@ func (d *DB) fetchProjectExtrafields(ctx context.Context, projectID int64) (map[
 
 	out := make(map[string]any, len(cols))
 	for i, name := range cols {
-		// rowid and fk_object are plumbing, not custom fields.
-		if name == "rowid" || name == "fk_object" {
+		if extrafieldPlumbing[name] {
 			continue
 		}
 		raw := holders[i].(*sql.RawBytes)
