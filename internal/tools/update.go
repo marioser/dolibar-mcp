@@ -20,7 +20,7 @@ func (d *Deps) HandleUpdate(ctx context.Context, req *mcp.CallToolRequest, input
 	}
 
 	path := fmt.Sprintf("%s/%d", mapper.EntityToAPIPath(input.Entity), input.ID)
-	payload := mapper.MapToDolibarr(input.Data)
+	payload := mapper.MapEntityToDolibarr(input.Entity, input.Data)
 
 	result, err := d.API.Put(ctx, path, payload)
 	if err != nil {

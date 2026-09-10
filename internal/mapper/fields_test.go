@@ -184,3 +184,53 @@ func TestValidActions(t *testing.T) {
 		t.Error("customers should not support state actions")
 	}
 }
+
+// A project's description must reach Dolibarr as "description". The API accepts a
+// payload carrying "desc", answers 200, and silently discards the field — verified
+// against Dolibarr 23: PUT /projects/{id} with {"desc":...} leaves the description
+// untouched, while {"description":...} updates it.
+func TestMapEntityToDolibarr_ProjectDescriptionIsNotRenamed(t *testing.T) {
+	out := MapEntityToDolibarr("projects", map[string]any{"description": "alcance del proyecto"})
+
+	if _, renamed := out["desc"]; renamed {
+		t.Fatalf("project description was renamed to desc; Dolibarr drops it silently: %#v", out)
+	}
+	if got := out["description"]; got != "alcance del proyecto" {
+		t.Fatalf("description = %#v, want it kept under the description key", got)
+	}
+}
+
+// Friendly names for the project header fields. The Dolibarr names on the right were
+// confirmed to round-trip through PUT /projects/{id} on Dolibarr 23.
+func TestMapEntityToDolibarr_ProjectHeaderAliases(t *testing.T) {
+	out := MapEntityToDolibarr("projects", map[string]any{
+		"budget":                50000,
+		"is_public":             1,
+		"opportunity_amount":    12000,
+		"opportunity_percent":   40,
+		"opportunity_status_id": 3,
+	})
+
+	want := map[string]any{
+		"budget_amount": 50000,
+		"public":        1,
+		"opp_amount":    12000,
+		"opp_percent":   40,
+		"fk_opp_status": 3,
+	}
+	if !reflect.DeepEqual(out, want) {
+		t.Fatalf("project header aliases mismatch\n got: %#v\nwant: %#v", out, want)
+	}
+}
+
+// Lines keep the historical rename: proposal/order line descriptions are "desc".
+func TestMapEntityToDolibarr_LineDescriptionStillBecomesDesc(t *testing.T) {
+	out := MapToDolibarr(map[string]any{"description": "<p>detalle</p>"})
+
+	if got := out["desc"]; got != "<p>detalle</p>" {
+		t.Fatalf("desc = %#v, want the line description mapped to desc", got)
+	}
+	if _, leaked := out["description"]; leaked {
+		t.Fatalf("line payload kept a description key: %#v", out)
+	}
+}
