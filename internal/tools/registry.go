@@ -107,6 +107,22 @@ For extrafields on lines: use "extrafields": {"field_name": "value"}.`,
 	}, deps.HandleLine)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name: "dolibarr_pep_budget",
+		Description: `Load or replace the PEP budget of a project (sgcosting module). This is the figure the purchase orders are later compared against, so writing is deliberate by design.
+
+mode=preview (DEFAULT, and what happens when mode is omitted): runs the rehearsal server-side and WRITES NOTHING. Returns what would be created, updated and removed, plus manual edits and charges that would be left orphaned. Always run this first.
+mode=apply: writes. On a project that already has a budget it also needs replace=true.
+
+If the budget carries manual edits, or the reload would leave charges without an element, the server answers 409 and applies nothing. That answer comes back as a readable report (conflict=true, preview=...), not as a failure — show it to a person. Only then resend the same call adding confirm_replace=true.
+
+Each element accepts 13 columns. Required: code, level, label. Optional: parent_code, chapter, center_code, brand_ref, fk_product, unit, qty, cost_unit, price_unit, source. Any other key is rejected before sending. level starts at 1; every element above level 1 needs a parent_code that exists in the same payload.`,
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
+		InputSchema: inputSchema[PEPBudgetInput](map[string][]any{
+			"mode": anySlice([]string{"preview", "apply"}),
+		}),
+	}, deps.HandlePEPBudget)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "dolibarr_action",
 		Description: "Change state of a Dolibarr document. Actions by entity — proposals: validate, close, settodraft, setinvoiced; orders: validate, close; projects: validate; purchases: validate, approve, makeorder, receive; shipments/receptions: validate, close. To SIGN/APPROVE a proposal, first 'validate' it, then 'close' it WITH status=2 (accepted/signed) or status=3 (refused) — closing a proposal requires the status field.",
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
