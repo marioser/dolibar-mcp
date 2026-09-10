@@ -78,25 +78,26 @@ type ProposalLine struct {
 
 // Project
 type Project struct {
-	ID           int64         `json:"id"`
-	Ref          string        `json:"ref"`
-	Title        string        `json:"title"`
-	Description  string        `json:"description,omitempty"`
-	CustomerID   *int64        `json:"customer_id,omitempty"`
-	CustomerName string        `json:"customer_name,omitempty"`
-	Status       int           `json:"status_code"`
-	StatusLabel  string        `json:"status"`
-	Public       int           `json:"public"`
-	DateStart    *time.Time    `json:"date_start,omitempty"`
-	DateEnd      *time.Time    `json:"date_end,omitempty"`
-	OppStatus    *int64        `json:"opp_status,omitempty"`
-	OppAmount    float64       `json:"opp_amount,omitempty"`
-	OppPercent   float64       `json:"opp_percent,omitempty"`
-	Budget       float64       `json:"budget,omitempty"`
-	NotePublic   string        `json:"note_public,omitempty"`
-	NotePrivate  string        `json:"note_private,omitempty"`
-	DateCreated  *time.Time    `json:"date_created,omitempty"`
-	Tasks        []ProjectTask `json:"tasks,omitempty"`
+	ID           int64          `json:"id"`
+	Ref          string         `json:"ref"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description,omitempty"`
+	CustomerID   *int64         `json:"customer_id,omitempty"`
+	CustomerName string         `json:"customer_name,omitempty"`
+	Status       int            `json:"status_code"`
+	StatusLabel  string         `json:"status"`
+	Public       int            `json:"public"`
+	DateStart    *time.Time     `json:"date_start,omitempty"`
+	DateEnd      *time.Time     `json:"date_end,omitempty"`
+	OppStatus    *int64         `json:"opp_status,omitempty"`
+	OppAmount    float64        `json:"opp_amount,omitempty"`
+	OppPercent   float64        `json:"opp_percent,omitempty"`
+	Budget       float64        `json:"budget,omitempty"`
+	NotePublic   string         `json:"note_public,omitempty"`
+	NotePrivate  string         `json:"note_private,omitempty"`
+	DateCreated  *time.Time     `json:"date_created,omitempty"`
+	Extrafields  map[string]any `json:"extrafields,omitempty"`
+	Tasks        []ProjectTask  `json:"tasks,omitempty"`
 }
 
 type ProjectTask struct {

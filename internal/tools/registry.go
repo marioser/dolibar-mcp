@@ -72,9 +72,18 @@ For proposals/orders, ALWAYS fill ALL header fields:
 - shipping_method_id, source_id (demand reason), incoterms_id, incoterms_location
 - note_public, note_private
 
+For projects:
+- title (REQUIRED — create fails without it), description (free text, plain or HTML)
+- customer_id, date_start, date_end, budget, is_public (0=private, 1=public)
+- opportunity_amount, opportunity_percent, opportunity_status_id, note_public, note_private
+To attach an existing proposal/order/purchase to a project, do NOT use this tool on the
+project: update the DOCUMENT with "project_id": <project id>. That is how Dolibarr links
+a document to a project.
+
 Extrafields (custom fields) — use "extrafields": {"field_name": "value"}:
 - Proposals: tos_attached (REQUIRED, values: "NoCgv"|"TOS.pdf"|"DSERRANO_CONDICIONES COMERCIALES S&G.pdf"), asunto (subject text), ref_cliente, jira_key, jira_url
 - Orders: tos_attached (same values as proposals), ref_cliente
+- Projects: jira_key
 
 Include 'lines' array. Each line 'description' MUST be in HTML format and be detailed — explain what the item/service covers, its scope, specs, and relevant details. Use <h3> for title, <p> for paragraphs, <ul>/<ol> for lists, <strong> for emphasis, <table> for data. NEVER use plain text — always HTML. Also: qty, unit_price, vat_rate, product_type (0=product, 1=service). Optional: product_id, discount_percent, unit_id.`,
 	}, deps.HandleCreate)

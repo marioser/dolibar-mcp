@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 An MCP (Model Context Protocol) server that exposes a Dolibarr ERP instance to LLM
-clients through 7 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
+clients through 8 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
 
 ## Commands
 
@@ -24,7 +24,19 @@ gofmt -l .
 docker build -t dolibarr-mcp .
 ```
 
-There are currently **no test files** in the repo, so `go test ./...` is a no-op.
+Run the tests with `go test -count=1 ./...`. The `-count=1` matters: Go caches results,
+and a pass can be reported from cache after an edit that should have invalidated it.
+
+Two suites are gated behind env vars and skipped by default:
+
+```bash
+# Read layer against a real Dolibarr database
+DOLIBARR_IT=1 go test ./internal/doldb/
+
+# End-to-end writes against a real Dolibarr API — creates documents,
+# so point it at a disposable instance, never production
+DOLIBARR_E2E=1 go test ./internal/tools/
+```
 
 ## The core architecture: read/write split (CQRS-style)
 
