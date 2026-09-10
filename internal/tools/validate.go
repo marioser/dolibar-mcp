@@ -15,9 +15,16 @@ import (
 //   - ref_client / customer_ref, and the ref_cliente extrafield: the customer's
 //     order number (e.g. "OC XXX")
 func stripAutoNumberRef(entity string, data map[string]any) {
-	if mapper.IsAutoNumbered(entity) {
-		delete(data, "ref")
+	if !mapper.IsAutoNumbered(entity) {
+		return
 	}
+	// Some resources reject a payload with no ref at all and expect the literal
+	// "auto" to trigger the mask; the rest want the key gone entirely.
+	if auto, needsRef := mapper.AutoRefValue(entity); needsRef {
+		data["ref"] = auto
+		return
+	}
+	delete(data, "ref")
 }
 
 // validateCreate enforces the required data contract so creation does not
@@ -37,6 +44,15 @@ func validateCreate(entity string, data map[string]any) error {
 		// document is created unusable rather than rejected.
 		if !hasValue(data, "title", "label") {
 			return fmt.Errorf("title is required to create a project")
+		}
+	case "tasks":
+		// POST /tasks answers 400 without a label, and a task with no parent
+		// project is orphaned and invisible in the project view.
+		if !hasValue(data, "label", "title") {
+			return fmt.Errorf("label is required to create a task")
+		}
+		if !hasValue(data, "project_id", "fk_project") {
+			return fmt.Errorf("project_id is required to create a task")
 		}
 	}
 

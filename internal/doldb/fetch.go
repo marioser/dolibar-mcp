@@ -22,6 +22,8 @@ func (d *DB) Fetch(ctx context.Context, entity string, id int64, ref string) (an
 		return d.fetchProduct(ctx, id, ref)
 	case "projects":
 		return d.fetchProject(ctx, id, ref)
+	case "tasks":
+		return d.fetchTask(ctx, id, ref)
 	case "warehouses":
 		return d.fetchWarehouse(ctx, id, ref)
 	case "shipments":
@@ -404,6 +406,37 @@ func (d *DB) fetchProject(ctx context.Context, id int64, ref string) (*Project, 
 	pj.Extrafields, _ = d.fetchProjectExtrafields(ctx, pj.ID)
 	pj.Tasks, _ = d.fetchProjectTasks(ctx, pj.ID)
 	return &pj, nil
+}
+
+// fetchTask reads a single project task. It reuses ProjectTask, the shape already
+// returned nested under a project, so a task looks the same however it is reached.
+//
+// Spent carries duration_effective, the running total Dolibarr keeps on the task
+// row. That is not the same as the individual time entries, which live in their
+// own table and are not exposed here.
+func (d *DB) fetchTask(ctx context.Context, id int64, ref string) (*ProjectTask, error) {
+	where, arg := d.idOrRef(id, ref, "t")
+	q := fmt.Sprintf(`SELECT t.rowid, t.ref, t.label, COALESCE(t.description,''),
+		t.dateo, t.datee, COALESCE(t.progress,0), COALESCE(t.planned_workload,0),
+		COALESCE(t.duration_effective,0), COALESCE(t.fk_statut,0)
+	FROM %s t WHERE %s`, d.T("projet_task"), where)
+
+	var t ProjectTask
+	var dateStart, dateEnd sql.NullTime
+	err := d.QueryRowContext(ctx, q, arg).Scan(
+		&t.ID, &t.Ref, &t.Label, &t.Description,
+		&dateStart, &dateEnd, &t.Progress, &t.Planned, &t.Spent, &t.Status,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("task not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	t.DateStart = ScanNullTime(dateStart)
+	t.DateEnd = ScanNullTime(dateEnd)
+	return &t, nil
 }
 
 // fetchProjectExtrafields reads the project's custom fields. Writes already accept
