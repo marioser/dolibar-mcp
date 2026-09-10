@@ -88,6 +88,11 @@ mismatches between DB columns and REST property names are a recurring class of b
 the API assigns request keys directly onto PHP object properties, which differ from DB
 column names.
 
+**Before adding a field or an entity, read [`docs/dolibarr-api-evidence.md`](docs/dolibarr-api-evidence.md).**
+It records what the Dolibarr REST API actually does, measured with real requests
+rather than inferred. Two of its findings are silent failures — the API answers
+`200 OK` and discards the field — so guessing here is expensive.
+
 ## Line descriptions must be HTML
 
 Tool descriptions in `registry.go` enforce a hard project rule: line `description`
