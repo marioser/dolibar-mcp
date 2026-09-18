@@ -86,6 +86,10 @@ For tasks (the work breakdown of a project):
 Logging actual hours worked is NOT available: Dolibarr 23's addtimespent endpoint is
 broken upstream. planned_hours is the estimate, not time spent.
 
+For customers (thirdparties):
+- name (REQUIRED — create fails with 400 "name field missing" without it)
+- client (1=customer, 2=prospect, 3=both), email, phone, url, code_client, tva_intra, country_id, note_public, note_private
+
 Extrafields (custom fields) — use "extrafields": {"field_name": "value"}:
 - Proposals: tos_attached (REQUIRED, values: "NoCgv"|"TOS.pdf"|"DSERRANO_CONDICIONES COMERCIALES S&G.pdf"), asunto (subject text), ref_cliente, jira_key, jira_url
 - Orders: tos_attached (same values as proposals), ref_cliente
