@@ -234,3 +234,22 @@ func TestMapEntityToDolibarr_LineDescriptionStillBecomesDesc(t *testing.T) {
 		t.Fatalf("line payload kept a description key: %#v", out)
 	}
 }
+
+// Thirdparties are validated on the raw request: api_thirdparties.class.php declares
+// $FIELDS = array('name') and answers 400 "name field missing" when the key is absent,
+// before anything is assigned to the object. Renaming it to "nom" (the deprecated
+// Societe alias) made every customer create fail. Verified on Dolibarr 23:
+//
+//	POST /thirdparties {"nom":"x"}       -> 400 name field missing
+//	POST /thirdparties {"name":"x"}      -> 200
+//	PUT  /thirdparties/{id} {"nom":"y"}  -> 200, but the name is not changed
+func TestMapEntityToDolibarr_CustomerNameIsNotRenamed(t *testing.T) {
+	out := MapEntityToDolibarr("customers", map[string]any{"name": "Bimbo"})
+
+	if _, renamed := out["nom"]; renamed {
+		t.Fatalf("customer name was renamed to nom; POST /thirdparties answers 400 name field missing: %#v", out)
+	}
+	if got := out["name"]; got != "Bimbo" {
+		t.Fatalf("name = %#v, want it kept under the name key", got)
+	}
+}

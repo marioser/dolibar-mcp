@@ -82,12 +82,16 @@ func MapToDolibarr(data map[string]any) map[string]any {
 		"client_ref":         "ref_client",
 		"proposalkit_ref":    "ref_ext", // ProposalKit tracking id (external reference)
 		"label":              "label",
-		"name":               "nom",
-		"title":              "title",
-		"date":               "date",
-		"due_date":           "date_lim_reglement",
-		"delivery_date":      "delivery_date",
-		"validity_end":       "fin_validite",
+		// Thirdparties: the REST API validates "name" on the raw request ($FIELDS in
+		// api_thirdparties.class.php) and answers 400 "name field missing" without it.
+		// "nom" is the deprecated Societe property: POST rejects it and PUT silently
+		// ignores it, so it must never be sent.
+		"name":          "name",
+		"title":         "title",
+		"date":          "date",
+		"due_date":      "date_lim_reglement",
+		"delivery_date": "delivery_date",
+		"validity_end":  "fin_validite",
 		// Project header. These Dolibarr names were confirmed to round-trip through
 		// PUT /projects/{id}; without an alias the caller has to guess them.
 		"budget":                "budget_amount",

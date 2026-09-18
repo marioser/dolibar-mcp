@@ -4,13 +4,14 @@ What the Dolibarr REST API actually does for the project lifecycle, established 
 sending real requests to a Dolibarr **23** instance and reading the responses.
 Nothing here is inferred from documentation.
 
-Recorded 2026-09-10 while building the project capabilities. Re-verify before
-relying on any of it against a different Dolibarr version — several entries below
-are version-specific, and one is an upstream bug that may be fixed later.
+Recorded 2026-09-10 while building the project capabilities; the thirdparty
+entries were added 2026-09-17 (issue #19). Re-verify before relying on any of it
+against a different Dolibarr version — several entries below are version-specific,
+and one is an upstream bug that may be fixed later.
 
 ## Why this file exists
 
-Two of these findings are silent failures: the API answers `200 OK` and discards
+Three of these findings are silent failures: the API answers `200 OK` and discards
 the work. No amount of reading the response tells you it happened. They cost real
 debugging time to find, so they are written down rather than rediscovered.
 
@@ -31,8 +32,10 @@ debugging time to find, so they are written down rather than rediscovered.
 | List documents | `GET /documents?modulepart=X&id=N` | Works — 404 means "none", not "no endpoint" |
 | Link document to project | `PUT /<document>/{id}` with `fk_project` | Works |
 | Document ↔ document links | — | **No REST API** |
+| Create thirdparty (customer) | `POST /thirdparties` | Works — **requires `name`**, `nom` is rejected |
+| Rename thirdparty | `PUT /thirdparties/{id}` | Works — **`name`, never `nom`** (silently ignored) |
 
-## The two silent failures
+## The three silent failures
 
 ### A project description sent as `desc` is discarded
 
@@ -61,6 +64,27 @@ its numbering mask. Sending a real ref overrides the mask, which is why it canno
 simply be passed through.
 
 Tasks behave like projects. Handled by `mapper.AutoRefValue`.
+
+### A thirdparty renamed with `nom` keeps its old name
+
+```
+POST /thirdparties       {"nom": "x", "client": 1}   -> 400 Bad Request: name field missing
+POST /thirdparties       {"name": "x", "client": 1}  -> 200, returns the new id
+PUT  /thirdparties/{id}  {"nom": "y"}                -> 200 OK, name UNCHANGED
+PUT  /thirdparties/{id}  {"name": "y"}               -> 200 OK, name updated
+```
+
+`api_thirdparties.class.php` declares `$FIELDS = array('name')` and validates the
+raw request before touching the object, so a create without that exact key is
+rejected outright. `nom` is the deprecated `Societe` property: `create()` still
+falls back to it, but the API validation runs first; `update()` only falls back
+when `name` is empty, and by then `name` is already loaded from the database, so
+the rename is dropped without a word.
+
+The mapper used to rename `name` to `nom` for every entity (issue #19), which made
+every customer create fail since the first release and every rename a no-op. No
+entity exposed by this server takes `nom` over REST — products and warehouses use
+`label`, projects use `title` — so `name` is now passed through untouched.
 
 ## Tasks
 
@@ -152,6 +176,16 @@ field.
 
 A disposable Dolibarr 23 in Docker (`dolibarr/dolibarr:23` plus MariaDB) is
 enough, and its container also carries the ERP source, which is how the Restler
-bug above was traced. API keys live in plaintext in `llx_user.api_key`.
+bug above was traced. API keys live in `llx_user.api_key`; a snapshot restored
+from another instance may hold them encrypted (`dolcrypt:…`), which the API
+rejects, so set a temporary plaintext key on an admin user and restore it after.
+
+The thirdparty contract has a gated end-to-end test that creates, renames and
+deletes a customer through the MCP handlers:
+
+```
+DOLIBARR_E2E=1 DOLIBARR_API_URL=http://localhost:8081/api/index.php DOLIBARR_API_KEY=… \
+  go test -count=1 ./internal/tools/ -run CustomerE2E -v
+```
 
 Never run write probes against production.

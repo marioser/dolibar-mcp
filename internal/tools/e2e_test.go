@@ -161,3 +161,68 @@ func getProposal(t *testing.T, c *dolapi.Client, ctx context.Context, id int64) 
 	}
 	return m
 }
+
+// End-to-end check of the customer (thirdparty) contract against a real Dolibarr
+// REST API. Skipped unless DOLIBARR_E2E=1. Requires DOLIBARR_API_URL and
+// DOLIBARR_API_KEY. It CREATES and then DELETES a real thirdparty in the target
+// instance, so point it at a disposable copy — never production.
+//
+// Guards issue #19: the mapper used to rename name -> nom, which POST /thirdparties
+// rejects with 400 "name field missing" and PUT /thirdparties/{id} silently ignores.
+func TestCustomerE2E(t *testing.T) {
+	if os.Getenv("DOLIBARR_E2E") == "" {
+		t.Skip("set DOLIBARR_E2E=1 to run the end-to-end customer test")
+	}
+
+	client := dolapi.New(&config.Config{
+		APIUrl: os.Getenv("DOLIBARR_API_URL"),
+		APIKey: os.Getenv("DOLIBARR_API_KEY"),
+	})
+	deps := &Deps{API: client}
+	ctx := context.Background()
+
+	const created, renamed = "MCP E2E Cliente", "MCP E2E Cliente Renombrado"
+
+	res, out, err := deps.HandleCreate(ctx, nil, CreateInput{Entity: "customers", Data: map[string]any{
+		"name":   created,
+		"client": 1,
+	}})
+	if e := toolErr(res, err); e != nil {
+		t.Fatalf("create customer failed: %v", e)
+	}
+	id := asInt64(t, out.Result)
+	t.Logf("created thirdparty id=%d", id)
+	t.Cleanup(func() {
+		dres, _, derr := deps.HandleDelete(context.Background(), nil, DeleteInput{Entity: "customers", ID: id})
+		if e := toolErr(dres, derr); e != nil {
+			t.Errorf("cleanup: delete thirdparty %d: %v", id, e)
+		}
+	})
+
+	if got := getThirdparty(t, client, ctx, id)["name"]; got != created {
+		t.Fatalf("name after create = %#v, want %q", got, created)
+	}
+
+	ures, _, uerr := deps.HandleUpdate(ctx, nil, UpdateInput{Entity: "customers", ID: id, Data: map[string]any{
+		"name": renamed,
+	}})
+	if e := toolErr(ures, uerr); e != nil {
+		t.Fatalf("update customer failed: %v", e)
+	}
+	if got := getThirdparty(t, client, ctx, id)["name"]; got != renamed {
+		t.Fatalf("name after update = %#v, want %q (rename silently dropped)", got, renamed)
+	}
+	t.Logf("OK: thirdparty %d created with name and renamed through the MCP", id)
+}
+
+func getThirdparty(t *testing.T, c *dolapi.Client, ctx context.Context, id int64) map[string]any {
+	raw, err := c.Get(ctx, "thirdparties/"+strconv.FormatInt(id, 10))
+	if err != nil {
+		t.Fatalf("get thirdparty %d: %v", id, err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("decode thirdparty: %v", err)
+	}
+	return m
+}
