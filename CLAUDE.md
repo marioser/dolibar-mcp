@@ -4,6 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
+User-facing documentation lives in [`README.md`](README.md). This file is the working
+guide for editing the code.
+
 An MCP (Model Context Protocol) server that exposes a Dolibarr ERP instance to LLM
 clients through 9 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
 
@@ -102,7 +105,7 @@ and `Fetch`, which materialise their rows before returning.
 | `internal/doldb` | Read layer over MySQL. `Search`, `Fetch`, `loadDolConfig` (Dolibarr `const` settings — multicompany, multiprice, stock mode, main currency), plus `retry.go` (transient-failure replay) and `cache.go` (short-TTL read cache + singleflight). |
 | `internal/dolapi` | Write layer: thin REST client with `DOLAPIKEY` header, retry on 5xx (3 attempts), structured `APIError`, and the `OnWrite` hook that invalidates the read cache. |
 | `internal/mapper` | Translation layer between the MCP-facing "friendly" field names and Dolibarr's internal names/paths. |
-| `internal/tools` | The 7 MCP tool handlers + `registry.go` (tool names + descriptions). |
+| `internal/tools` | The 9 MCP tool handlers + `registry.go` (tool names + descriptions). |
 | `internal/response` | Output formatting to compact JSON strings. |
 
 ## The mapper is the contract boundary — edit it deliberately
@@ -168,4 +171,5 @@ Default transport is `stdio` (for local MCP clients). For containerized/hosted
 deployments (CapRover), set `MCP_TRANSPORT=http` — this is required or the web deploy
 has nothing to serve. In HTTP mode the container must expose the listener on `8080`
 (the `EXPOSE`d port); a mismatched upstream port surfaces as a 502 behind a proxy.
-`/health` returns `{"status":"ok",...}` and is unauthenticated.
+`/health` is unauthenticated. It pings the database: 200 with the cache counters when
+it answers, 503 with the reason when it does not.
