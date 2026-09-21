@@ -10,6 +10,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/sgsoluciones/dolibarr-mcp/internal/config"
 )
 
@@ -31,6 +33,12 @@ const (
 type DB struct {
 	*sql.DB
 	cfg *config.Config
+
+	// cache absorbs the duplicate reads an LLM caller produces while it
+	// reasons; group collapses identical reads that are in flight at the same
+	// time into a single round trip.
+	cache *readCache
+	group singleflight.Group
 
 	mu       sync.Mutex
 	dolCfg   *DolConfig
@@ -58,7 +66,11 @@ func New(cfg *config.Config) (*DB, error) {
 	db.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
 	db.SetConnMaxIdleTime(cfg.DBConnMaxIdleTime)
 
-	return &DB{DB: db, cfg: cfg}, nil
+	return &DB{
+		DB:    db,
+		cfg:   cfg,
+		cache: newReadCache(cfg.CacheTTL, cfg.CacheMaxEntries),
+	}, nil
 }
 
 // Verify checks that the database answers and that the Dolibarr constants can
@@ -132,6 +144,51 @@ func (d *DB) queryContext(ctx context.Context) (context.Context, context.CancelF
 		return context.WithCancel(ctx)
 	}
 	return context.WithTimeout(ctx, timeout)
+}
+
+// InvalidateReads drops every cached read. It is wired to the REST client so
+// any successful write in this server clears the cache before the next read —
+// a single choke point, rather than an invalidation call that a future write
+// handler could forget.
+func (d *DB) InvalidateReads() {
+	if d == nil {
+		return
+	}
+	d.cache.invalidate()
+}
+
+// CacheStats exposes the cache counters for /health.
+func (d *DB) CacheStats() CacheStats {
+	if d == nil {
+		return CacheStats{}
+	}
+	return d.cache.stats()
+}
+
+// cachedRead serves key from the cache, and on a miss runs load exactly once
+// even if several callers ask at the same time.
+//
+// The generation is taken BEFORE load runs: if a write invalidates the cache
+// while the query is in flight, the result is returned to this caller but not
+// stored, because it is already a pre-write snapshot.
+//
+// Note that singleflight shares the leader's context: a follower joining an
+// in-flight read inherits the leader's cancellation. That is an acceptable
+// trade here — this server answers one MCP client whose calls share a timeout.
+func (d *DB) cachedRead(key string, load func() (any, error)) (any, error) {
+	if v, ok := d.cache.get(key); ok {
+		return v, nil
+	}
+
+	gen := d.cache.generation()
+
+	v, err, _ := d.group.Do(key, load)
+	if err != nil {
+		return nil, err
+	}
+
+	d.cache.putIfCurrent(key, v, gen)
+	return v, nil
 }
 
 // Healthy reports whether the database currently answers a ping.

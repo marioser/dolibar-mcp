@@ -34,6 +34,12 @@ type Config struct {
 	// QueryTimeout bounds a single MCP tool call against the database.
 	QueryTimeout time.Duration
 
+	// Read cache. An LLM caller re-reads the same record several times while
+	// it reasons; a short TTL absorbs that without letting a quotation go
+	// stale. Set CACHE_TTL=0 to turn it off entirely.
+	CacheTTL        time.Duration
+	CacheMaxEntries int
+
 	// API REST (writes)
 	APIUrl string
 	APIKey string
@@ -68,6 +74,9 @@ func Load() (*Config, error) {
 		DBReadTimeout:     envDurationOrDefault("DB_READ_TIMEOUT", 30*time.Second),
 		DBWriteTimeout:    envDurationOrDefault("DB_WRITE_TIMEOUT", 30*time.Second),
 		QueryTimeout:      envDurationOrDefault("DB_QUERY_TIMEOUT", 45*time.Second),
+
+		CacheTTL:        envDurationOrDefault("CACHE_TTL", 30*time.Second),
+		CacheMaxEntries: envIntOrDefault("CACHE_MAX_ENTRIES", 500),
 
 		APIUrl:    envOrDefault("DOLIBARR_API_URL", ""),
 		APIKey:    envOrDefault("DOLIBARR_API_KEY", ""),
@@ -133,15 +142,19 @@ func envIntOrDefault(key string, fallback int) int {
 
 // envDurationOrDefault reads a Go duration string (e.g. "30s", "5m"). A bare
 // integer is read as seconds so operators are not tripped up by the format.
+//
+// An explicit 0 is honoured and means "no bound" — for CACHE_TTL that is the
+// documented kill switch. Only an unset, negative or unparseable value falls
+// back, because those are mistakes rather than decisions.
 func envDurationOrDefault(key string, fallback time.Duration) time.Duration {
 	v := os.Getenv(key)
 	if v == "" {
 		return fallback
 	}
-	if d, err := time.ParseDuration(v); err == nil && d > 0 {
+	if d, err := time.ParseDuration(v); err == nil && d >= 0 {
 		return d
 	}
-	if n, err := strconv.Atoi(v); err == nil && n > 0 {
+	if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 		return time.Duration(n) * time.Second
 	}
 	return fallback

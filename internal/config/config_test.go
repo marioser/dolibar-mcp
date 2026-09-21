@@ -89,7 +89,10 @@ func TestEnvDurationOrDefault(t *testing.T) {
 		{"minutes", "2m", 2 * time.Minute},
 		{"bare integer is seconds", "90", 90 * time.Second},
 		{"garbage falls back", "soon", 7 * time.Second},
-		{"zero falls back", "0", 7 * time.Second},
+		// An explicit zero is a decision (the CACHE_TTL kill switch), not a
+		// mistake, so it must survive.
+		{"explicit zero is honoured", "0", 0},
+		{"explicit zero duration is honoured", "0s", 0},
 		{"negative falls back", "-5s", 7 * time.Second},
 	}
 

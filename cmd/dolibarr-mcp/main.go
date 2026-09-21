@@ -64,6 +64,9 @@ func main() {
 	}
 
 	apiClient := dolapi.New(cfg)
+	// Every write goes out through this client, so hooking invalidation here
+	// covers all of them — present and future — without touching a handler.
+	apiClient.OnWrite(db.InvalidateReads)
 
 	server := mcp.NewServer(
 		&mcp.Implementation{
@@ -101,8 +104,14 @@ func main() {
 				w.Write(body)
 				return
 			}
+			body, _ := json.Marshal(map[string]any{
+				"status":   "ok",
+				"version":  version,
+				"database": "ok",
+				"cache":    db.CacheStats(),
+			})
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok","version":"` + version + `","database":"ok"}`))
+			w.Write(body)
 		})
 
 		if cfg.AuthToken != "" {

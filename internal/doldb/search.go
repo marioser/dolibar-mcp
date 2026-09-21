@@ -20,7 +20,34 @@ type SearchParams struct {
 	Offset     int
 }
 
+// searchPage is what the cache stores for a search: the rows plus the total
+// the caller needs for pagination.
+type searchPage struct {
+	results []SearchResult
+	total   int
+}
+
 func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
+	v, err := d.cachedRead(searchKey(p), func() (any, error) {
+		results, total, sErr := d.searchUncached(ctx, p)
+		if sErr != nil {
+			return nil, sErr
+		}
+		return &searchPage{results: results, total: total}, nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	page := v.(*searchPage)
+	// Hand out a copy: the cached slice is shared by every caller that hits
+	// the same key, and an append or an in-place edit would corrupt it.
+	out := make([]SearchResult, len(page.results))
+	copy(out, page.results)
+	return out, page.total, nil
+}
+
+func (d *DB) searchUncached(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
 	ctx, cancel := d.queryContext(ctx)
 	defer cancel()
 

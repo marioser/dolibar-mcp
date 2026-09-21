@@ -55,14 +55,52 @@ depending on whether the operation reads or writes:
 `tools.Deps{DB, API}` is the seam: every handler receives both, and which one it uses
 tells you whether it is a read or a write path.
 
+### The split is also what makes the read cache safe
+
+Because every write goes out through `internal/dolapi`, there is exactly one place
+where Dolibarr data can change under us. `main.go` wires `apiClient.OnWrite(
+db.InvalidateReads)`, so any successful non-GET request clears the whole read cache
+before the caller can issue its next read. Add a write tool and it inherits the
+invalidation for free — there is nothing to remember.
+
+Two consequences worth holding on to:
+
+- **Never bypass `dolapi` for a write.** A direct DB write would skip Dolibarr's
+  triggers *and* leave the cache serving data that is already wrong.
+- **The cache holds immutable values.** `Fetch` returns `json.RawMessage` and `Search`
+  returns a copy of its slice, because a cached entry is shared by every caller that
+  hits the same key.
+
+## Resilience: what happens when the database is not there
+
+The server is launched by the MCP client and lives for the whole session, so a database
+hiccup must never be fatal. The rules:
+
+- **Startup never exits on a database error.** `doldb.New` only opens the (lazy) pool;
+  `db.Verify` reports reachability as a warning and the first tool call connects.
+- **Reads retry.** `internal/doldb/retry.go` replays a read on connection-level
+  failures and on transient MySQL errors (1040, 1053, 1205, 1213, 2006, 2013), three
+  attempts with backoff. Deterministic failures and cancellation are never retried.
+  This is only safe because `doldb` exclusively reads.
+- **Everything is bounded.** The DSN carries `timeout`/`readTimeout`/`writeTimeout`,
+  and `Search`/`Fetch` set a per-call deadline (`DB_QUERY_TIMEOUT`).
+- **`/health` pings the database** and answers 503 when it cannot. A 200 there means
+  the tools will actually work.
+- **Dolibarr constants degrade instead of failing.** `DolConfig(ctx)` refreshes on a
+  TTL and falls back to defaults rather than taking the server down.
+
+One trap worth naming: do not wrap `QueryContext` in a `defer cancel()`. Cancelling the
+context closes the `*sql.Rows` it returned. That is why the deadline lives in `Search`
+and `Fetch`, which materialise their rows before returning.
+
 ## Package map
 
 | Package | Responsibility |
 |---------|----------------|
 | `cmd/dolibarr-mcp` | Entry point. Wires config → DB → API → MCP server. Chooses stdio vs HTTP transport, mounts `/mcp` (+ Bearer auth) and `/health`. |
 | `internal/config` | Env-based config. `DSN()` builds the MySQL DSN; `T(table)` prefixes table names with `DB_PREFIX` (default `llx_`). |
-| `internal/doldb` | Read layer over MySQL. `Search`, `Fetch`, and `loadDolConfig` (reads Dolibarr `const` settings at startup — multicompany, multiprice, stock mode, main currency). |
-| `internal/dolapi` | Write layer: thin REST client with `DOLAPIKEY` header, retry on 5xx (3 attempts), structured `APIError`. |
+| `internal/doldb` | Read layer over MySQL. `Search`, `Fetch`, `loadDolConfig` (Dolibarr `const` settings — multicompany, multiprice, stock mode, main currency), plus `retry.go` (transient-failure replay) and `cache.go` (short-TTL read cache + singleflight). |
+| `internal/dolapi` | Write layer: thin REST client with `DOLAPIKEY` header, retry on 5xx (3 attempts), structured `APIError`, and the `OnWrite` hook that invalidates the read cache. |
 | `internal/mapper` | Translation layer between the MCP-facing "friendly" field names and Dolibarr's internal names/paths. |
 | `internal/tools` | The 7 MCP tool handlers + `registry.go` (tool names + descriptions). |
 | `internal/response` | Output formatting to compact JSON strings. |

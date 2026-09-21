@@ -3,13 +3,35 @@ package doldb
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"golang.org/x/sync/errgroup"
 )
 
+// Fetch returns one entity as JSON.
+//
+// The result is json.RawMessage on both a cache hit and a miss. Handing out
+// the live *Proposal (or *Order, ...) would mean every cache hit shares one
+// struct with every caller, so a single mutation anywhere downstream would
+// silently corrupt what the next caller reads. JSON bytes are immutable, and
+// the only consumer marshals the value anyway.
 func (d *DB) Fetch(ctx context.Context, entity string, id int64, ref string) (any, error) {
+	return d.cachedRead(fetchKey(entity, id, ref), func() (any, error) {
+		entity, err := d.fetchUncached(ctx, entity, id, ref)
+		if err != nil {
+			return nil, err
+		}
+		payload, err := json.Marshal(entity)
+		if err != nil {
+			return nil, fmt.Errorf("encode %T: %w", entity, err)
+		}
+		return json.RawMessage(payload), nil
+	})
+}
+
+func (d *DB) fetchUncached(ctx context.Context, entity string, id int64, ref string) (any, error) {
 	// Bound the whole fetch — header, lines and any extrafield lookups — so a
 	// slow or half-dead database cannot hang a tool call indefinitely. Safe to
 	// cancel on return: everything below materialises its rows before it exits.
