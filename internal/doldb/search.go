@@ -21,6 +21,9 @@ type SearchParams struct {
 }
 
 func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
+	ctx, cancel := d.queryContext(ctx)
+	defer cancel()
+
 	if p.Limit <= 0 {
 		p.Limit = 25
 	}

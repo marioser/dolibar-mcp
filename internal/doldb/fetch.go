@@ -3,12 +3,19 @@ package doldb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"golang.org/x/sync/errgroup"
 )
 
 func (d *DB) Fetch(ctx context.Context, entity string, id int64, ref string) (any, error) {
+	// Bound the whole fetch — header, lines and any extrafield lookups — so a
+	// slow or half-dead database cannot hang a tool call indefinitely. Safe to
+	// cancel on return: everything below materialises its rows before it exits.
+	ctx, cancel := d.queryContext(ctx)
+	defer cancel()
+
 	switch entity {
 	case "proposals":
 		return d.fetchProposal(ctx, id, ref)
@@ -113,7 +120,7 @@ func (d *DB) fetchProposal(ctx context.Context, id int64, ref string) (*Proposal
 	})
 
 	if err := g.Wait(); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("proposal not found")
 		}
 		return nil, err
@@ -125,7 +132,7 @@ func (d *DB) fetchProposal(ctx context.Context, id int64, ref string) (*Proposal
 	p.DeliveryDate = ScanNullTime(dliv)
 	p.DateCreated = ScanNullTime(datec)
 	p.DateModified = ScanNullTime(tms)
-	p.Currency = d.dolCfg.MainCurrency
+	p.Currency = d.DolConfig(ctx).MainCurrency
 	p.Lines = lines
 
 	return &p, nil
@@ -196,7 +203,7 @@ func (d *DB) fetchOrder(ctx context.Context, id int64, ref string) (*Order, erro
 		&o.PaymentTermLabel, &o.PaymentModeLabel,
 		&o.NotePublic, &o.NotePrivate, &o.Billed,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("order not found")
 	}
 	if err != nil {
@@ -208,7 +215,7 @@ func (d *DB) fetchOrder(ctx context.Context, id int64, ref string) (*Order, erro
 	o.DeliveryDate = ScanNullTime(dateLiv)
 	o.StatusLabel = statusLabel("orders", o.Status)
 	if o.Currency == "" {
-		o.Currency = d.dolCfg.MainCurrency
+		o.Currency = d.DolConfig(ctx).MainCurrency
 	}
 
 	o.Lines, err = d.fetchOrderLikeLines(ctx, "commandedet", o.ID)
@@ -274,7 +281,7 @@ func (d *DB) fetchPurchase(ctx context.Context, id int64, ref string) (*Supplier
 		&dateCmd, &dateLiv,
 		&o.PaymentTermLabel, &o.NotePublic, &o.NotePrivate, &o.Billed,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("supplier order not found")
 	}
 	if err != nil {
@@ -286,7 +293,7 @@ func (d *DB) fetchPurchase(ctx context.Context, id int64, ref string) (*Supplier
 	o.DeliveryDate = ScanNullTime(dateLiv)
 	o.StatusLabel = statusLabel("purchases", o.Status)
 	if o.Currency == "" {
-		o.Currency = d.dolCfg.MainCurrency
+		o.Currency = d.DolConfig(ctx).MainCurrency
 	}
 
 	o.Lines, err = d.fetchOrderLikeLines(ctx, "commande_fournisseurdet", o.ID)
@@ -318,7 +325,7 @@ func (d *DB) fetchCustomer(ctx context.Context, id int64, ref string) (*Customer
 		&cu.Phone, &cu.Email, &cu.URL, &cu.TaxID,
 		&cu.NotePublic, &cu.NotePrivate, &datec,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("customer not found")
 	}
 	if err != nil {
@@ -350,7 +357,7 @@ func (d *DB) fetchProduct(ctx context.Context, id int64, ref string) (*Product, 
 		&pr.Stock, &pr.StockAlert,
 		&pr.Barcode, &pr.Weight, &unitID, &datec,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("product not found")
 	}
 	if err != nil {
@@ -389,7 +396,7 @@ func (d *DB) fetchProject(ctx context.Context, id int64, ref string) (*Project, 
 		&pj.OppAmount, &pj.OppPercent, &pj.Budget,
 		&pj.NotePublic, &pj.NotePrivate, &datec,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("project not found")
 	}
 	if err != nil {
@@ -427,7 +434,7 @@ func (d *DB) fetchTask(ctx context.Context, id int64, ref string) (*ProjectTask,
 		&t.ID, &t.Ref, &t.Label, &t.Description,
 		&dateStart, &dateEnd, &t.Progress, &t.Planned, &t.Spent, &t.Status,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("task not found")
 	}
 	if err != nil {
@@ -539,7 +546,7 @@ func (d *DB) fetchWarehouse(ctx context.Context, id int64, ref string) (*Warehou
 		&w.Location, &w.Address, &w.Zip, &w.Town,
 		&parentID, &projectID,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("warehouse not found")
 	}
 	if err != nil {
@@ -576,7 +583,7 @@ func (d *DB) fetchShipment(ctx context.Context, id int64, ref string) (*Shipment
 		&originID, &sh.OriginType,
 		&sh.NotePublic, &sh.NotePrivate,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("shipment not found")
 	}
 	if err != nil {
@@ -611,7 +618,7 @@ func (d *DB) fetchReception(ctx context.Context, id int64, ref string) (*Recepti
 		&originID, &rc.OriginType,
 		&rc.NotePublic, &rc.NotePrivate,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("reception not found")
 	}
 	if err != nil {

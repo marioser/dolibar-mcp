@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,6 +16,9 @@ import (
 	"github.com/sgsoluciones/dolibarr-mcp/internal/doldb"
 	"github.com/sgsoluciones/dolibarr-mcp/internal/tools"
 )
+
+// version is the single source of truth for what this binary reports.
+const version = "2.4.2"
 
 func authMiddleware(token string, next http.Handler) http.Handler {
 	expected := []byte(token)
@@ -39,20 +43,32 @@ func main() {
 
 	db, err := doldb.New(cfg)
 	if err != nil {
+		// Only an unusable DSN reaches here — nothing a retry would fix.
 		fmt.Fprintf(os.Stderr, "database error: %v\n", err)
 		os.Exit(1)
 	}
 	defer db.Close()
 
-	fmt.Fprintf(os.Stderr, "connected to database %s (entity=%d, currency=%s)\n",
-		cfg.DBName, cfg.Entity, db.DolConfig().MainCurrency)
+	// A database that is briefly unreachable must NOT take the server down.
+	// This process is launched by the MCP client and lives for the whole
+	// session: exiting here used to leave every tool dead until the user
+	// restarted the client, even after Dolibarr came back seconds later.
+	if err := db.Verify(context.Background()); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"WARNING: database %s@%s:%d is not reachable yet (%v)\n"+
+				"         the server is starting anyway and will connect on the first tool call\n",
+			cfg.DBName, cfg.DBHost, cfg.DBPort, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "connected to database %s (entity=%d, currency=%s)\n",
+			cfg.DBName, cfg.Entity, db.DolConfig(context.Background()).MainCurrency)
+	}
 
 	apiClient := dolapi.New(cfg)
 
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "dolibarr-mcp",
-			Version: "2.4.2",
+			Version: version,
 		},
 		nil,
 	)
@@ -60,7 +76,7 @@ func main() {
 	deps := &tools.Deps{DB: db, API: apiClient}
 	tools.Register(server, deps)
 
-	fmt.Fprintf(os.Stderr, "dolibarr-mcp v2.4.2 ready (transport=%s, 9 tools)\n", cfg.Transport)
+	fmt.Fprintf(os.Stderr, "dolibarr-mcp v%s ready (transport=%s, 9 tools)\n", version, cfg.Transport)
 
 	if cfg.Transport == "http" {
 		addr := fmt.Sprintf(":%d", cfg.HTTPPort)
@@ -70,9 +86,23 @@ func main() {
 		}, nil)
 
 		mux := http.NewServeMux()
+		// The health check pings the database. A server that answers 200 while
+		// every tool fails is worse than one that reports itself unhealthy:
+		// orchestrators need the difference to restart or route around it.
 		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if err := db.Healthy(r.Context()); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				body, _ := json.Marshal(map[string]string{
+					"status":  "degraded",
+					"version": version,
+					"error":   "database unreachable: " + err.Error(),
+				})
+				w.Write(body)
+				return
+			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok","version":"2.4.2"}`))
+			w.Write([]byte(`{"status":"ok","version":"` + version + `","database":"ok"}`))
 		})
 
 		if cfg.AuthToken != "" {
