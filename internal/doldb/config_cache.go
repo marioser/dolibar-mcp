@@ -15,7 +15,8 @@ type DolConfig struct {
 	MainCurrency           string
 }
 
-// dolConfigKeys are the Dolibarr const names read at startup.
+// dolConfigKeys are the Dolibarr const names read on demand and refreshed
+// every dolConfigTTL.
 var dolConfigKeys = []string{
 	"MAIN_PRODUCT_PERENTITY_SHARED",
 	"MAIN_COMPANY_PERENTITY_SHARED",
@@ -25,10 +26,17 @@ var dolConfigKeys = []string{
 	"MAIN_MONNAIE",
 }
 
+// defaultDolConfig is what the server falls back to while the constants cannot
+// be read. Every flag off and USD matches a stock single-entity Dolibarr, so a
+// temporarily unreachable database degrades instead of breaking.
+func defaultDolConfig() *DolConfig {
+	return &DolConfig{MainCurrency: "USD"}
+}
+
 // loadDolConfig reads all needed Dolibarr constants in a single query (instead
 // of one round-trip per key). Entity-specific values override global (entity 0).
 func (d *DB) loadDolConfig(ctx context.Context) (*DolConfig, error) {
-	cfg := &DolConfig{MainCurrency: "USD"}
+	cfg := defaultDolConfig()
 
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(dolConfigKeys)), ",")
 	q := "SELECT name, value FROM " + d.T("const") +

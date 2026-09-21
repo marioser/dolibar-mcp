@@ -18,6 +18,26 @@ type Client struct {
 	http    *http.Client
 	baseURL string
 	apiKey  string
+
+	// onWrite runs after any successful non-GET request. It is the single
+	// choke point that clears the read cache, so a new write tool cannot
+	// forget to invalidate: everything already goes through Do.
+	onWrite func()
+}
+
+// OnWrite registers the callback invoked after every successful write. Wiring
+// it here rather than in each handler means the invalidation cannot drift out
+// of sync with the set of write tools.
+func (c *Client) OnWrite(fn func()) {
+	c.onWrite = fn
+}
+
+// invalidate fires the write hook for methods that can change Dolibarr data.
+func (c *Client) invalidate(method string) {
+	if c.onWrite == nil || method == http.MethodGet || method == http.MethodHead {
+		return
+	}
+	c.onWrite()
 }
 
 type APIError struct {
@@ -128,6 +148,10 @@ func (c *Client) Do(ctx context.Context, method, endpoint string, body any) (jso
 			}
 			return nil, &APIError{StatusCode: resp.StatusCode, Message: msg, Raw: string(respBody)}
 		}
+
+		// The write landed: anything the read cache is holding may now be out
+		// of date. Invalidate before the caller can issue its next read.
+		c.invalidate(method)
 
 		return json.RawMessage(respBody), nil
 	}
