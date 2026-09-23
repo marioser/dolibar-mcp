@@ -157,6 +157,26 @@ Entities that carry documents: projects, tasks, proposals, orders, purchases, cu
 	}, deps.HandleDocument)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name: "dolibarr_proposal_freeze_version",
+		Description: `Freeze the current live version of a proposal (sgproposalversion module >= 1.3.0). Do this BEFORE changing a proposal that was already sent, so the previous prices and scope stay on record.
+
+The frozen copy stores the live version number (v0, v1, ...), archives its PDF, and the live proposal advances to the next number. note is required: say why the version is being frozen.
+
+Returns id, fk_propal, version_num (the number just frozen), live_version_num (the new live number), pdf_filename and warning. A non-empty warning means the version was saved but something best-effort (usually the PDF archive) failed — show it to a person.
+
+Use dolibarr_proposal_versions to see the history.`,
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(false)},
+		InputSchema: inputSchema[ProposalFreezeVersionInput](nil),
+	}, deps.HandleProposalFreezeVersion)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "dolibarr_proposal_versions",
+		Description: "List the frozen versions of a proposal (sgproposalversion module), newest first: version_num, date_creation, author (fk_user_creat, user_login, user_name), note and pdf_filename. Also returns live_version_num, the number the live proposal carries now (0 when nothing has been frozen yet). Snapshots are not included.",
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
+		InputSchema: inputSchema[ProposalVersionsInput](nil),
+	}, deps.HandleProposalVersions)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "dolibarr_action",
 		Description: "Change state of a Dolibarr document. Actions by entity — proposals: validate, close, settodraft, setinvoiced; orders: validate, close; projects: validate; purchases: validate, approve, makeorder, receive; shipments/receptions: validate, close. To SIGN/APPROVE a proposal, first 'validate' it, then 'close' it WITH status=2 (accepted/signed) or status=3 (refused) — closing a proposal requires the status field.",
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
