@@ -1,6 +1,6 @@
 # dolibarr-mcp
 
-An MCP server that gives an LLM client real, working access to a [Dolibarr](https://www.dolibarr.org/) ERP — search it, read it, and write to it through nine tools, without the model ever touching SQL or the REST API directly.
+An MCP server that gives an LLM client real, working access to a [Dolibarr](https://www.dolibarr.org/) ERP — search it, read it, and write to it through eleven tools, without the model ever touching SQL or the REST API directly.
 
 Written in Go, single static binary, no runtime dependencies.
 
@@ -28,7 +28,7 @@ That split is also what makes the read cache safe to have: every write in this s
 
 ## What you get
 
-Nine tools across ten entity types (`customers`, `products`, `proposals`, `projects`, `tasks`, `orders`, `purchases`, `warehouses`, `shipments`, `receptions`):
+Eleven tools across ten entity types (`customers`, `products`, `proposals`, `projects`, `tasks`, `orders`, `purchases`, `warehouses`, `shipments`, `receptions`):
 
 | Tool | What it does |
 |------|--------------|
@@ -41,6 +41,8 @@ Nine tools across ten entity types (`customers`, `products`, `proposals`, `proje
 | `dolibarr_action` | Change document state — validate, close, approve, receive. Per entity: proposals (`validate`, `close`, `settodraft`, `setinvoiced`), orders (`validate`, `close`), projects (`validate`), purchases (`validate`, `approve`, `makeorder`, `receive`), shipments and receptions (`validate`, `close`). |
 | `dolibarr_document` | Attach a file to a document, or list what is already attached. |
 | `dolibarr_pep_budget` | Load or replace a project's PEP budget (the `sgcosting` module). Defaults to a server-side dry run that writes nothing. |
+| `dolibarr_proposal_freeze_version` | Freeze the live version of a proposal with a required note, before changing it (the `sgproposalversion` module, 1.3.0 or later). |
+| `dolibarr_proposal_versions` | List a proposal's frozen versions, newest first, and its live version number. Read from the database; needs the `sgproposalversion` module installed. |
 
 Two behaviours are worth knowing before you use the write tools:
 
@@ -114,7 +116,7 @@ On startup the server writes to stderr what it connected to:
 
 ```
 connected to database dolibarr (entity=1, currency=COP)
-dolibarr-mcp v2.5.0 ready (transport=stdio, 9 tools)
+dolibarr-mcp v2.5.0 ready (transport=stdio, 11 tools)
 ```
 
 ### Hosted (HTTP)
@@ -199,7 +201,7 @@ DOLIBARR_E2E=1 go test ./internal/tools/
 | `internal/doldb` | Read layer over MySQL: `Search`, `Fetch`, transient-failure retry, and the read cache. |
 | `internal/dolapi` | Write layer: REST client with retry on 5xx, structured errors, and the cache-invalidation hook. |
 | `internal/mapper` | Translation between the LLM-friendly vocabulary and Dolibarr's internal names and paths. |
-| `internal/tools` | The nine tool handlers and the registry that describes them. |
+| `internal/tools` | The eleven tool handlers and the registry that describes them. |
 | `internal/response` | Output formatting. |
 
 ### Before you add a field or an entity

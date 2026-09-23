@@ -79,7 +79,7 @@ func main() {
 	deps := &tools.Deps{DB: db, API: apiClient}
 	tools.Register(server, deps)
 
-	fmt.Fprintf(os.Stderr, "dolibarr-mcp v%s ready (transport=%s, 9 tools)\n", version, cfg.Transport)
+	fmt.Fprintf(os.Stderr, "dolibarr-mcp v%s ready (transport=%s, 11 tools)\n", version, cfg.Transport)
 
 	if cfg.Transport == "http" {
 		addr := fmt.Sprintf(":%d", cfg.HTTPPort)
