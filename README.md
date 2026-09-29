@@ -116,7 +116,7 @@ On startup the server writes to stderr what it connected to:
 
 ```
 connected to database dolibarr (entity=1, currency=COP)
-dolibarr-mcp v2.7.0 ready (transport=stdio, 12 tools)
+dolibarr-mcp v2.7.1 ready (transport=stdio, 12 tools)
 ```
 
 ### Hosted (HTTP)

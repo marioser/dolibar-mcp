@@ -226,3 +226,38 @@ func TestUploadDoesNotOverwriteUnlessAsked(t *testing.T) {
 		t.Fatalf("overwriteifexists = %#v, want 1 when overwrite is requested", got)
 	}
 }
+
+// Dolibarr IGNORES subdir when ref is present. api_documents.class.php branches
+// on ref: with it, the destination comes from the object's own directory and
+// subdir plays no part; only a call without ref reads subdir at all. And ref is
+// required to upload.
+//
+// Verified against the production ERP: an upload to project COM-989 with
+// subdir="internal" landed in projet/COM-989, not projet/COM-989/internal.
+//
+// Accepting both silently puts the file somewhere other than where the caller
+// asked — and the caller asking for "internal" is asking for the one with the
+// direct cost in it. Refusing is the only honest answer.
+func TestUploadRefusesSubdirBecauseTheCoreIgnoresIt(t *testing.T) {
+	deps, c, closeSrv := documentDeps(t)
+	defer closeSrv()
+
+	_, _, err := deps.HandleDocument(context.Background(), nil, DocumentInput{
+		Action:   "upload",
+		Entity:   "projects",
+		Ref:      "COM-989",
+		Subdir:   "internal",
+		Filename: "APU-INT-COM989-v0.xlsx",
+		Content:  base64.StdEncoding.EncodeToString([]byte("xlsx")),
+	})
+
+	if err == nil {
+		t.Fatal("an upload with subdir was accepted; the core would have ignored it")
+	}
+	if !strings.Contains(err.Error(), "subdir") {
+		t.Errorf("the error does not name the offending parameter: %v", err)
+	}
+	if c.hits != 0 {
+		t.Errorf("the request left the process anyway (%d hits)", c.hits)
+	}
+}
