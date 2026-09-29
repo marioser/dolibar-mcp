@@ -145,8 +145,8 @@ Each element accepts 13 columns. Required: code, level, label. Optional: parent_
 		Name: "dolibarr_document",
 		Description: `Attach a file to a Dolibarr document, or see what is already attached.
 
-action=upload: attaches a file. It needs the entity's REF (e.g. PJ2012-0080), not its id — the file is stored in a directory named after that reference. 'content' MUST be base64; sending raw text stores a corrupted file and is rejected before the request leaves.
-action=list: returns the files attached to an entity, by id or ref.
+action=upload: attaches a file. It needs the entity's REF (e.g. PJ2012-0080), not its id — the file is stored in a directory named after that reference. 'content' MUST be base64; sending raw text stores a corrupted file and is rejected before the request leaves. A repeated filename is refused unless 'overwrite' is true.
+action=list: returns the files attached to an entity, by id or ref. An entity with no attachments returns an EMPTY LIST, not an error — that is the normal state of a project whose ref just changed, and the moment a caller checks the attachments followed the rename. Any other failure is still reported as an error.
 
 Entities that carry documents: projects, tasks, proposals, orders, purchases, customers, shipments, receptions, products.`,
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(false)},
