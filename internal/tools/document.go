@@ -68,7 +68,7 @@ type DocumentInput struct {
 	ID        int64  `json:"id,omitempty" jsonschema:"Entity ID. Accepted when listing; uploads need the ref instead."`
 	Filename  string `json:"filename,omitempty" jsonschema:"File name including its extension, e.g. informe.pdf. Required to upload."`
 	Content   string `json:"content,omitempty" jsonschema:"File contents encoded as base64. Required to upload. Raw text is rejected — encode it first or the file is stored corrupted."`
-	Subdir    string `json:"subdir,omitempty" jsonschema:"Optional subdirectory inside the entity's document folder."`
+	Subdir    string `json:"subdir,omitempty" jsonschema:"Subdirectory, for LIST only. Rejected on upload: Dolibarr ignores it whenever ref is given, so the file would silently land in the root folder."`
 	Overwrite bool   `json:"overwrite,omitempty" jsonschema:"Replace a file that already carries this name. Default false: Dolibarr refuses a repeated name, which is what happens when the attachments of a renamed project are re-uploaded."`
 }
 
@@ -106,6 +106,23 @@ func (d *Deps) uploadDocument(ctx context.Context, input DocumentInput, modulepa
 	if _, err := base64.StdEncoding.DecodeString(input.Content); err != nil {
 		return nil, WriteOutput{}, fmt.Errorf(
 			"content must be base64: %v. Encode the file first — sending raw bytes stores a corrupted file", err)
+	}
+	if input.Subdir != "" {
+		// THE CORE IGNORES subdir WHEN ref IS PRESENT, and ref is required here.
+		// api_documents.class.php branches on ref: with it, the destination is
+		// built from the object's own directory and subdir plays no part; only a
+		// call without ref reads subdir at all.
+		//
+		// Verified against a real ERP: an upload to project COM-989 with
+		// subdir="internal" landed in projet/COM-989, not .../internal.
+		//
+		// Accepting it silently would put the file somewhere other than where
+		// the caller asked — and a caller asking for "internal" is asking for
+		// the copy with the direct cost in it.
+		return nil, WriteOutput{}, fmt.Errorf(
+			"subdir cannot be used on upload: Dolibarr ignores it whenever ref is given, " +
+				"and ref is required here — the file would silently land in the entity's " +
+				"root folder instead. Distinguish the file by its name")
 	}
 
 	payload := map[string]any{
