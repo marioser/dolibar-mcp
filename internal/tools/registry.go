@@ -170,6 +170,24 @@ Use dolibarr_proposal_versions to see the history.`,
 	}, deps.HandleProposalFreezeVersion)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name: "dolibarr_contacts",
+		Description: `Read the people attached to a project or to a customer, and correct one of them.
+
+action=list: the contacts of an element. For a PROJECT it returns the people actually assigned to it, each with the role it plays there (role_code/role_label, e.g. CUSTOMER "Responsable Cliente") — that role is the point: a name alone does not say whether the person is the client's responsible or a bystander. For a CUSTOMER it returns every contact of the third party, with no role.
+An element with no contacts returns an EMPTY LIST, not an error.
+action=update: changes a contact's own fields (lastname, firstname, poste, email, phone, phone_mobile). 'id' here is the CONTACT's id, not the project's.
+
+This is read through the database because the REST API has no endpoint for it: api_projects.class.php exposes get/getByRef/getByRefExt/getByMsgId/index/post/getLines/getRoles/put/delete/validate and no getContacts, and api_thirdparties.class.php has none either. The link lives in llx_element_contact.
+
+Creating a contact, or assigning/unassigning one to a project, is NOT available here.`,
+		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(false)},
+		InputSchema: inputSchema[ContactsInput](map[string][]any{
+			"action": anySlice([]string{ContactActionList, ContactActionUpdate}),
+			"entity": anySlice(ContactEntities()),
+		}),
+	}, deps.HandleContacts)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "dolibarr_proposal_versions",
 		Description: "List the frozen versions of a proposal (sgproposalversion module), newest first: version_num, date_creation, author (fk_user_creat, user_login, user_name), note and pdf_filename. Also returns live_version_num, the number the live proposal carries now (0 when nothing has been frozen yet). Snapshots are not included.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},

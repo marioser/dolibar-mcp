@@ -8,7 +8,7 @@ User-facing documentation lives in [`README.md`](README.md). This file is the wo
 guide for editing the code.
 
 An MCP (Model Context Protocol) server that exposes a Dolibarr ERP instance to LLM
-clients through 11 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
+clients through 12 tools. Written in Go (`go 1.25.0`), module `github.com/sgsoluciones/dolibarr-mcp`.
 
 ## Commands
 
