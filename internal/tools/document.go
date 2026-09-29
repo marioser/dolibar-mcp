@@ -3,12 +3,15 @@ package tools
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/sgsoluciones/dolibarr-mcp/internal/dolapi"
 )
 
 // DocumentsEndpoint is the Dolibarr REST resource for files. Uploads take the
@@ -59,13 +62,14 @@ func documentEntityList() string {
 }
 
 type DocumentInput struct {
-	Action   string `json:"action" jsonschema:"upload (attach a file) or list (see what is attached)"`
-	Entity   string `json:"entity" jsonschema:"Entity the file belongs to: projects|tasks|proposals|orders|purchases|customers|shipments|receptions|products"`
-	Ref      string `json:"ref,omitempty" jsonschema:"Document reference (e.g. PJ2012-0080). REQUIRED to upload: the file is stored in a directory named after it."`
-	ID       int64  `json:"id,omitempty" jsonschema:"Entity ID. Accepted when listing; uploads need the ref instead."`
-	Filename string `json:"filename,omitempty" jsonschema:"File name including its extension, e.g. informe.pdf. Required to upload."`
-	Content  string `json:"content,omitempty" jsonschema:"File contents encoded as base64. Required to upload. Raw text is rejected — encode it first or the file is stored corrupted."`
-	Subdir   string `json:"subdir,omitempty" jsonschema:"Optional subdirectory inside the entity's document folder."`
+	Action    string `json:"action" jsonschema:"upload (attach a file) or list (see what is attached)"`
+	Entity    string `json:"entity" jsonschema:"Entity the file belongs to: projects|tasks|proposals|orders|purchases|customers|shipments|receptions|products"`
+	Ref       string `json:"ref,omitempty" jsonschema:"Document reference (e.g. PJ2012-0080). REQUIRED to upload: the file is stored in a directory named after it."`
+	ID        int64  `json:"id,omitempty" jsonschema:"Entity ID. Accepted when listing; uploads need the ref instead."`
+	Filename  string `json:"filename,omitempty" jsonschema:"File name including its extension, e.g. informe.pdf. Required to upload."`
+	Content   string `json:"content,omitempty" jsonschema:"File contents encoded as base64. Required to upload. Raw text is rejected — encode it first or the file is stored corrupted."`
+	Subdir    string `json:"subdir,omitempty" jsonschema:"Optional subdirectory inside the entity's document folder."`
+	Overwrite bool   `json:"overwrite,omitempty" jsonschema:"Replace a file that already carries this name. Default false: Dolibarr refuses a repeated name, which is what happens when the attachments of a renamed project are re-uploaded."`
 }
 
 func (d *Deps) HandleDocument(ctx context.Context, req *mcp.CallToolRequest, input DocumentInput) (*mcp.CallToolResult, WriteOutput, error) {
@@ -110,6 +114,9 @@ func (d *Deps) uploadDocument(ctx context.Context, input DocumentInput, modulepa
 		"ref":          input.Ref,
 		"filecontent":  input.Content,
 		"fileencoding": "base64",
+		// The core reads this as 0/1. Sending it always — rather than only when
+		// true — keeps the body shape stable across calls.
+		"overwriteifexists": overwriteFlag(input.Overwrite),
 	}
 	if input.Subdir != "" {
 		payload["subdir"] = input.Subdir
@@ -147,6 +154,26 @@ func (d *Deps) listDocuments(ctx context.Context, input DocumentInput, modulepar
 
 	result, err := d.API.Get(ctx, DocumentsEndpoint+"?"+q.Encode())
 	if err != nil {
+		// AN EMPTY FOLDER IS NOT A FAILURE. The core answers 404 "does not
+		// return any document" when the directory is empty or was never
+		// created — which is exactly the state of a project right after its
+		// ref changed, and precisely when a caller asks, to check the
+		// attachments followed the rename. Reporting that as an error stops
+		// the check at the only moment it matters.
+		//
+		// The exception stays narrow on purpose: any other status still
+		// fails, so a project whose files exist but could not be read is
+		// never mistaken for one with no files.
+		var apiErr *dolapi.APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
+			return nil, WriteOutput{
+				Success: true,
+				Entity:  input.Entity,
+				ID:      input.ID,
+				Action:  DocumentActionList,
+				Result:  []any{},
+			}, nil
+		}
 		return writeError("list documents of "+input.Entity, err)
 	}
 
@@ -157,4 +184,12 @@ func (d *Deps) listDocuments(ctx context.Context, input DocumentInput, modulepar
 		Action:  DocumentActionList,
 		Result:  parseResult(result),
 	}, nil
+}
+
+// overwriteFlag turns the caller's intent into the 0/1 the core expects.
+func overwriteFlag(overwrite bool) int {
+	if overwrite {
+		return 1
+	}
+	return 0
 }
