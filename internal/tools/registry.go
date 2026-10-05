@@ -195,6 +195,23 @@ Creating a contact, or assigning/unassigning one to a project, is NOT available 
 	}, deps.HandleProposalVersions)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name: "dolibarr_price_history",
+		Description: `Purchase and sale price history of one or several products, in one call. read-only: it never writes prices or costs. Use it to cost a quotation with what was really paid, and to check what a customer was charged before.
+
+Give product_ids and/or product_refs (at most 50 products in total). customer_id, months (default 12) and percentile (default 90) are optional.
+
+All prices are UNIT NET prices (line discount applied, before tax) in the company base currency (COP).
+
+Per product (Spanish keys, same contract as the sgpurchasehistory REST API):
+- compras: from the sgpurchasehistory module's table (supplier orders and invoices, rows marked excluded left out). cantidad_total = all purchases; cantidad_ventana, promedio_ventana (weighted by quantity) and percentil cover the last 'months' months ENDING AT THE LAST PURCHASE, not today — the same figures as the product's purchase-history tab in Dolibarr. Quote with percentil, inform with promedio_ventana. ultima = most recent purchase (precio, fecha, proveedor, documento, tipo order|invoice).
+- ventas: validated or paid standard customer invoices (no credit notes) dated in the last 'months' months from TODAY: cantidad_ventana lines and their simple average promedio_ventana. With customer_id, ultima_cliente is the latest sale of the product to that customer at any date: the latest invoice line (tipo "factura"), or if never invoiced, the latest signed proposal line (tipo "propuesta").
+
+Products without purchases or sales come back with zeros and nulls, not an error. Unknown ids keep their place with ref/label null and are also listed, with unknown refs, in no_encontrados. If the sgpurchasehistory module is not installed, compras is null for every product, ventas are still computed and 'aviso' explains why.`,
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
+		InputSchema: inputSchema[PriceHistoryInput](nil),
+	}, deps.HandlePriceHistory)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "dolibarr_action",
 		Description: "Change state of a Dolibarr document. Actions by entity — proposals: validate, close, settodraft, setinvoiced; orders: validate, close; projects: validate; purchases: validate, approve, makeorder, receive; shipments/receptions: validate, close. To SIGN/APPROVE a proposal, first 'validate' it, then 'close' it WITH status=2 (accepted/signed) or status=3 (refused) — closing a proposal requires the status field.",
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
