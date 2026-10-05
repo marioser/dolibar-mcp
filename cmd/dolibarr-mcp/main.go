@@ -18,7 +18,7 @@ import (
 )
 
 // version is the single source of truth for what this binary reports.
-const version = "2.7.1"
+const version = "2.8.0"
 
 func authMiddleware(token string, next http.Handler) http.Handler {
 	expected := []byte(token)
