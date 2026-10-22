@@ -18,7 +18,7 @@ import (
 )
 
 // version is the single source of truth for what this binary reports.
-const version = "2.7.1"
+const version = "2.8.0"
 
 func authMiddleware(token string, next http.Handler) http.Handler {
 	expected := []byte(token)
@@ -79,7 +79,7 @@ func main() {
 	deps := &tools.Deps{DB: db, API: apiClient}
 	tools.Register(server, deps)
 
-	fmt.Fprintf(os.Stderr, "dolibarr-mcp v%s ready (transport=%s, 11 tools)\n", version, cfg.Transport)
+	fmt.Fprintf(os.Stderr, "dolibarr-mcp v%s ready (transport=%s, 13 tools)\n", version, cfg.Transport)
 
 	if cfg.Transport == "http" {
 		addr := fmt.Sprintf(":%d", cfg.HTTPPort)

@@ -28,7 +28,7 @@ That split is also what makes the read cache safe to have: every write in this s
 
 ## What you get
 
-Eleven tools across ten entity types (`customers`, `products`, `proposals`, `projects`, `tasks`, `orders`, `purchases`, `warehouses`, `shipments`, `receptions`):
+Thirteen tools across ten entity types (`customers`, `products`, `proposals`, `projects`, `tasks`, `orders`, `purchases`, `warehouses`, `shipments`, `receptions`):
 
 | Tool | What it does |
 |------|--------------|
@@ -43,6 +43,8 @@ Eleven tools across ten entity types (`customers`, `products`, `proposals`, `pro
 | `dolibarr_pep_budget` | Load or replace a project's PEP budget (the `sgcosting` module). Defaults to a server-side dry run that writes nothing. |
 | `dolibarr_proposal_freeze_version` | Freeze the live version of a proposal with a required note, before changing it (the `sgproposalversion` module, 1.3.0 or later). |
 | `dolibarr_proposal_versions` | List a proposal's frozen versions, newest first, and its live version number. Read from the database; needs the `sgproposalversion` module installed. |
+| `dolibarr_contacts` | List the contacts of a project (with their role) or a customer, and correct one contact's own fields. |
+| `dolibarr_price_history` | Read-only purchase and sale price history of up to 50 products: purchase count, window average, percentile and last purchase (from the `sgpurchasehistory` module, same figures as its product tab), sales from validated customer invoices, and — with `customer_id` — the last sale to that customer (invoice, or signed proposal as fallback). Unit net prices in base currency. Without the module, purchases come back `null` with an `aviso`. |
 
 Two behaviours are worth knowing before you use the write tools:
 
@@ -116,7 +118,7 @@ On startup the server writes to stderr what it connected to:
 
 ```
 connected to database dolibarr (entity=1, currency=COP)
-dolibarr-mcp v2.7.1 ready (transport=stdio, 12 tools)
+dolibarr-mcp v2.7.1 ready (transport=stdio, 13 tools)
 ```
 
 ### Hosted (HTTP)
