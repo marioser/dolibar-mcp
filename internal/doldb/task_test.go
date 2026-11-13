@@ -50,10 +50,7 @@ func TestTasksAreSearchableAndFetchable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetch task %d: %v", first.ID, err)
 	}
-	task, ok := got.(*ProjectTask)
-	if !ok {
-		t.Fatalf("Fetch returned %T, want *ProjectTask", got)
-	}
+	task := decodeFetch[ProjectTask](t, got)
 	if task.ID != first.ID {
 		t.Fatalf("fetched task id = %d, want %d", task.ID, first.ID)
 	}

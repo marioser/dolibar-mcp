@@ -463,7 +463,8 @@ func (d *DB) searchTasks(ctx context.Context, p SearchParams) ([]SearchResult, i
 	}
 
 	selectSQL := fmt.Sprintf(`SELECT t.rowid, t.ref, t.label, t.fk_statut,
-		COALESCE(t.planned_workload,0), t.dateo, t.datee, COALESCE(s.nom,''), COALESCE(s.rowid,0) %s%s
+		COALESCE(t.planned_workload,0), t.dateo, t.datee, COALESCE(s.nom,''), COALESCE(s.rowid,0),
+		COALESCE(pj.ref,'') %s%s
 		ORDER BY t.dateo DESC, t.rang LIMIT ? OFFSET ?`, base, where)
 	qb.addLimitOffset(p.Limit, p.Offset)
 
@@ -478,7 +479,7 @@ func (d *DB) searchTasks(ctx context.Context, p SearchParams) ([]SearchResult, i
 		var r SearchResult
 		var dateStart, dateEnd NullableTime
 		if err := rows.Scan(&r.ID, &r.Ref, &r.Label, &r.StatusCode,
-			&r.TotalHT, &dateStart, &dateEnd, &r.Customer, &r.CustomerID); err != nil {
+			&r.TotalHT, &dateStart, &dateEnd, &r.Customer, &r.CustomerID, &r.ProjectRef); err != nil {
 			return nil, 0, err
 		}
 		r.Status = statusLabel("tasks", r.StatusCode)

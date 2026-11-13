@@ -51,10 +51,7 @@ func TestProjectExtrafieldsAreReadBack(t *testing.T) {
 		t.Fatalf("fetch project %d: %v", projectID, err)
 	}
 
-	pj, ok := got.(*Project)
-	if !ok {
-		t.Fatalf("Fetch returned %T, want *Project", got)
-	}
+	pj := decodeFetch[Project](t, got)
 	if pj.Extrafields == nil {
 		t.Fatalf("project %d has extrafields in the database but Fetch returned none", projectID)
 	}

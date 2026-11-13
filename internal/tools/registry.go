@@ -195,6 +195,19 @@ Creating a contact, or assigning/unassigning one to a project, is NOT available 
 	}, deps.HandleProposalVersions)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name: "dolibarr_project_activity",
+		Description: `The logbook of a project: everything that happened in it, in time order. The field activity reports of the sgtimecontrol planner, the project agenda and manually loaded time live HERE, not in dolibarr_search or dolibarr_get.
+
+Returns the project header, its tasks (with progress) and a paged timeline. Timeline items: report (a technician's field report, in ALL states — draft, submitted, rejected, approved — with its state, comment, observation_reason, assignment_note, coordinates and the list of evidence files), report_event (the state history of a report), agenda (meetings, calls, emails linked to the project) and time (hours loaded by hand on a task). Each item names its user and task.
+
+Give exactly one of project_id or ref. date_from / date_to are YYYY-MM-DD and inclusive; omit both for the whole project. limit defaults to 25 and is capped at 100; use offset to page, total is the size of the whole timeline.
+
+Evidence lists file names only (entry_id, filename, filepath, mimetype); downloading them is not available yet. If sgtimecontrol is not installed, the project, tasks, agenda and manual time are still returned and notice says so.`,
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
+		InputSchema: inputSchema[ProjectActivityInput](nil),
+	}, deps.HandleProjectActivity)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "dolibarr_action",
 		Description: "Change state of a Dolibarr document. Actions by entity — proposals: validate, close, settodraft, setinvoiced; orders: validate, close; projects: validate; purchases: validate, approve, makeorder, receive; shipments/receptions: validate, close. To SIGN/APPROVE a proposal, first 'validate' it, then 'close' it WITH status=2 (accepted/signed) or status=3 (refused) — closing a proposal requires the status field.",
 		Annotations: &mcp.ToolAnnotations{DestructiveHint: boolPtr(true)},
