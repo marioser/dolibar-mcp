@@ -432,7 +432,7 @@ func (d *DB) fetchProject(ctx context.Context, id int64, ref string) (*Project, 
 	pj.DateCreated = ScanNullTime(datec)
 	pj.StatusLabel = statusLabel("projects", pj.Status)
 
-	pj.Extrafields, _ = d.fetchProjectExtrafields(ctx, pj.ID)
+	pj.Extrafields, _ = d.fetchExtrafields(ctx, "projet_extrafields", pj.ID)
 	pj.Tasks, _ = d.fetchProjectTasks(ctx, pj.ID)
 	return &pj, nil
 }
@@ -447,14 +447,16 @@ func (d *DB) fetchTask(ctx context.Context, id int64, ref string) (*ProjectTask,
 	where, arg := d.idOrRef(id, ref, "t")
 	q := fmt.Sprintf(`SELECT t.rowid, t.ref, t.label, COALESCE(t.description,''),
 		t.dateo, t.datee, COALESCE(t.progress,0), COALESCE(t.planned_workload,0),
-		COALESCE(t.duration_effective,0), COALESCE(t.fk_statut,0)
-	FROM %s t WHERE %s`, d.T("projet_task"), where)
+		COALESCE(t.duration_effective,0), COALESCE(t.fk_statut,0),
+		t.fk_projet, COALESCE(pj.ref,'')
+	FROM %s t LEFT JOIN %s pj ON pj.rowid = t.fk_projet WHERE %s`, d.T("projet_task"), d.T("projet"), where)
 
 	var t ProjectTask
 	var dateStart, dateEnd sql.NullTime
 	err := d.QueryRowContext(ctx, q, arg).Scan(
 		&t.ID, &t.Ref, &t.Label, &t.Description,
 		&dateStart, &dateEnd, &t.Progress, &t.Planned, &t.Spent, &t.Status,
+		&t.ProjectID, &t.ProjectRef,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("task not found")
@@ -465,6 +467,7 @@ func (d *DB) fetchTask(ctx context.Context, id int64, ref string) (*ProjectTask,
 
 	t.DateStart = ScanNullTime(dateStart)
 	t.DateEnd = ScanNullTime(dateEnd)
+	t.Extrafields, _ = d.fetchExtrafields(ctx, "projet_task_extrafields", t.ID)
 	return &t, nil
 }
 
@@ -478,15 +481,16 @@ var extrafieldPlumbing = map[string]bool{
 	"import_key": true,
 }
 
-// fetchProjectExtrafields reads the project's custom fields. Writes already accept
-// them (the mapper turns "extrafields" into array_options), so without this the
+// fetchExtrafields reads the custom fields of one object from its *_extrafields
+// table (unprefixed name, e.g. "projet_extrafields"). Writes already accept them
+// (the mapper turns "extrafields" into array_options), so without this the
 // caller can set a value and never read it back to confirm it landed.
 //
 // The extrafields table has one column per configured field, and those differ per
 // instance, so the columns are discovered at query time rather than hardcoded.
-func (d *DB) fetchProjectExtrafields(ctx context.Context, projectID int64) (map[string]any, error) {
-	q := fmt.Sprintf("SELECT * FROM %s WHERE fk_object = ?", d.T("projet_extrafields"))
-	rows, err := d.QueryContext(ctx, q, projectID)
+func (d *DB) fetchExtrafields(ctx context.Context, table string, objectID int64) (map[string]any, error) {
+	q := fmt.Sprintf("SELECT * FROM %s WHERE fk_object = ?", d.T(table))
+	rows, err := d.QueryContext(ctx, q, objectID)
 	if err != nil {
 		return nil, err
 	}
@@ -528,8 +532,10 @@ func (d *DB) fetchProjectExtrafields(ctx context.Context, projectID int64) (map[
 func (d *DB) fetchProjectTasks(ctx context.Context, projectID int64) ([]ProjectTask, error) {
 	q := fmt.Sprintf(`SELECT t.rowid, t.ref, t.label, COALESCE(t.description,''),
 		t.dateo, t.datee, COALESCE(t.progress,0), COALESCE(t.planned_workload,0),
-		COALESCE(t.duration_effective,0), COALESCE(t.fk_statut,0)
-	FROM %s t WHERE t.fk_projet = ? ORDER BY t.rang, t.dateo`, d.T("projet_task"))
+		COALESCE(t.duration_effective,0), COALESCE(t.fk_statut,0),
+		t.fk_projet, COALESCE(pj.ref,'')
+	FROM %s t LEFT JOIN %s pj ON pj.rowid = t.fk_projet
+	WHERE t.fk_projet = ? ORDER BY t.rang, t.dateo`, d.T("projet_task"), d.T("projet"))
 
 	rows, err := d.QueryContext(ctx, q, projectID)
 	if err != nil {
@@ -542,7 +548,8 @@ func (d *DB) fetchProjectTasks(ctx context.Context, projectID int64) ([]ProjectT
 		var t ProjectTask
 		var dateStart, dateEnd sql.NullTime
 		if err := rows.Scan(&t.ID, &t.Ref, &t.Label, &t.Description,
-			&dateStart, &dateEnd, &t.Progress, &t.Planned, &t.Spent, &t.Status); err != nil {
+			&dateStart, &dateEnd, &t.Progress, &t.Planned, &t.Spent, &t.Status,
+			&t.ProjectID, &t.ProjectRef); err != nil {
 			return nil, err
 		}
 		t.DateStart = ScanNullTime(dateStart)

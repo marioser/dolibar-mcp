@@ -19,6 +19,7 @@ type SearchResult struct {
 	Currency   string     `json:"currency,omitempty"`
 	Date       *time.Time `json:"date,omitempty"`
 	DateEnd    *time.Time `json:"date_end,omitempty"`
+	ProjectRef string     `json:"project_ref,omitempty"` // tasks only
 }
 
 // Proposal (propal)
@@ -101,16 +102,19 @@ type Project struct {
 }
 
 type ProjectTask struct {
-	ID          int64      `json:"id"`
-	Ref         string     `json:"ref"`
-	Label       string     `json:"label"`
-	Description string     `json:"description,omitempty"`
-	DateStart   *time.Time `json:"date_start,omitempty"`
-	DateEnd     *time.Time `json:"date_end,omitempty"`
-	Progress    int        `json:"progress"`
-	Planned     float64    `json:"planned_hours,omitempty"`
-	Spent       float64    `json:"spent_hours,omitempty"`
-	Status      int        `json:"status"`
+	ID          int64          `json:"id"`
+	Ref         string         `json:"ref"`
+	Label       string         `json:"label"`
+	Description string         `json:"description,omitempty"`
+	DateStart   *time.Time     `json:"date_start,omitempty"`
+	DateEnd     *time.Time     `json:"date_end,omitempty"`
+	Progress    int            `json:"progress"`
+	Planned     float64        `json:"planned_hours,omitempty"`
+	Spent       float64        `json:"spent_hours,omitempty"`
+	Status      int            `json:"status"`
+	ProjectID   int64          `json:"project_id"`
+	ProjectRef  string         `json:"project_ref"`
+	Extrafields map[string]any `json:"extrafields,omitempty"`
 }
 
 // Order (commande)

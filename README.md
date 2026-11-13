@@ -33,7 +33,7 @@ Eleven tools across ten entity types (`customers`, `products`, `proposals`, `pro
 | Tool | What it does |
 |------|--------------|
 | `dolibarr_search` | Search any entity. Filters: free text, customer, status, date range, amount range, with limit/offset. Returns a compact list. |
-| `dolibarr_get` | Full detail of one entity by id or ref, including nested lines for documents. |
+| `dolibarr_get` | Full detail of one entity by id or ref, including nested lines for documents. A task names its project (`project_id`, `project_ref`) and carries its extrafields; `dolibarr_search` on tasks returns `project_ref` too. |
 | `dolibarr_create` | Create an entity using friendly field names (`customer_id`, `unit_price`, `delivery_date`…) that are translated to Dolibarr's internal ones. |
 | `dolibarr_update` | Update an entity. Same friendly vocabulary. |
 | `dolibarr_delete` | Delete an entity by id. |
